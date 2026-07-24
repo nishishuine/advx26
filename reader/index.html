@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>百年孤独 · AI 阅读伴侣</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="light">
+
+<!-- ══════════ 加载中 ══════════ -->
+<div id="bootOverlay" class="boot-overlay">
+  <div class="boot-inner">
+    <div class="boot-spinner"></div>
+    <div class="boot-text" id="bootText">正在打开《百年孤独》书包…</div>
+  </div>
+</div>
+
+<!-- ══════════ 欢迎页 ══════════ -->
+<div id="welcomeOverlay" class="welcome-overlay" hidden>
+  <div class="welcome-card">
+    <div class="welcome-cover"><img id="welcomeCover" alt="封面"></div>
+    <div class="welcome-info">
+      <div class="welcome-kicker">AI 阅读伴侣 · 预处理完成</div>
+      <h1 class="welcome-title" id="welcomeTitle">百年孤独</h1>
+      <div class="welcome-author" id="welcomeAuthor"></div>
+      <div class="welcome-stats" id="welcomeStats"></div>
+      <div class="welcome-integrity" id="welcomeIntegrity"></div>
+      <button class="btn-primary btn-big" id="btnStart">开始阅读 →</button>
+      <div class="welcome-drop-hint">
+        也可以把任意 <code>.bookpack</code> 文件拖进这个页面
+        <label class="link-like">或点击选择文件<input type="file" id="fileInput" accept=".bookpack,.zip" hidden></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 顶栏 ══════════ -->
+<header id="topbar" hidden>
+  <div class="tb-brand">
+    <img id="tbCover" class="tb-cover" alt="">
+    <div class="tb-titles">
+      <div class="tb-title" id="tbTitle">百年孤独</div>
+      <div class="tb-sub" id="tbSub"></div>
+    </div>
+  </div>
+  <nav class="tb-tabs" id="tbTabs">
+    <button class="tb-tab active" data-tab="read">阅读</button>
+    <button class="tb-tab" data-tab="graph">关系图</button>
+    <button class="tb-tab" data-tab="chars">角色库</button>
+    <button class="tb-tab" data-tab="timeline">时间线</button>
+    <button class="tb-tab" data-tab="ask">问 AI</button>
+  </nav>
+  <div class="tb-right">
+    <div class="tb-progress" id="tbProgress" title="防剧透边界：所有视图只展示你已读到的内容"></div>
+    <button class="icon-btn" id="btnTheme" title="切换明/暗">🌙</button>
+    <button class="icon-btn" id="btnSettings" title="阅读设置">⚙️</button>
+  </div>
+</header>
+
+<!-- ══════════ 主区 ══════════ -->
+<main id="main" hidden>
+
+  <!-- ─── 阅读 ─── -->
+  <section class="panel active" id="panel-read">
+    <div class="reader-body">
+      <article class="reader-article" id="readerArticle">
+        <h2 class="chapter-title" id="chapterTitle"></h2>
+        <div class="chapter-meta" id="chapterMeta"></div>
+        <div class="reader-pages" id="readerPages">
+          <div id="chapterContent" class="chapter-content"></div>
+        </div>
+        <div class="page-nav">
+          <button class="page-btn" id="btnPrevPage" title="上一页 (←)">‹</button>
+          <span class="page-indicator" id="pageIndicator">1 / 1</span>
+          <button class="page-btn" id="btnNextPage" title="下一页 (→)">›</button>
+        </div>
+        <button class="tts-fab" id="btnTTS" title="听书">🔊</button>
+      </article>
+      <aside class="reader-aside">
+        <div class="aside-box">
+          <div class="aside-title">目录</div>
+          <div class="toc-list" id="tocList"></div>
+        </div>
+        <div class="aside-box">
+          <div class="aside-title">已出场人物 <span class="aside-count" id="legendCount"></span></div>
+          <div class="legend-list" id="legendList"></div>
+        </div>
+      </aside>
+    </div>
+    <!-- 听书播放条 -->
+    <div class="tts-bar" id="ttsBar" hidden>
+      <button class="tts-btn" id="ttsPlayPause">⏸</button>
+      <div class="tts-info" id="ttsInfo">正在朗读…</div>
+      <div class="tts-rates" id="ttsRates">
+        <button data-rate="0.75">0.75x</button>
+        <button data-rate="1" class="on">1.0x</button>
+        <button data-rate="1.25">1.25x</button>
+        <button data-rate="1.5">1.5x</button>
+        <button data-rate="2">2.0x</button>
+        <button data-rate="3">3.0x</button>
+        <button data-rate="4">4.0x</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 关系图 ─── -->
+  <section class="panel" id="panel-graph">
+    <div class="graph-toolbar">
+      <div class="seg" id="graphModeSeg">
+        <button class="seg-btn active" data-gmode="read">🛡 已读范围</button>
+        <button class="seg-btn" data-gmode="full">⚠️ 全书图谱</button>
+      </div>
+      <div class="graph-stats" id="graphStats"></div>
+      <div class="gt-right">
+        <button class="btn-ghost" id="btnRelayout">↻ 重新布局</button>
+        <button class="btn-ghost" id="btnExportGraph">📸 导出 PNG</button>
+      </div>
+    </div>
+    <div class="graph-wrap"><div id="graphCanvas"></div></div>
+    <div class="graph-legend">
+      <span><i class="gl-dot" style="background:#1E5FBF"></i>血缘</span>
+      <span><i class="gl-dot" style="background:#E91E63"></i>爱情</span>
+      <span><i class="gl-dot" style="background:#2E7D32"></i>友情</span>
+      <span><i class="gl-dot" style="background:#C0392B"></i>仇恨</span>
+      <span><i class="gl-dot" style="background:#8d8d8d"></i>其他</span>
+      <span class="gl-tip">点击节点查看角色卡片 · 可拖拽 / 缩放</span>
+    </div>
+  </section>
+
+  <!-- ─── 角色库 ─── -->
+  <section class="panel" id="panel-chars">
+    <div class="chars-toolbar">
+      <input class="search-input" id="charSearch" placeholder="搜索名字 / 别名，如：奥雷里亚诺、梅梅…">
+      <div class="chip-row" id="familyChips"></div>
+      <label class="spoiler-toggle"><input type="checkbox" id="charSpoilerAll"> 显示未登场角色（含剧透）</label>
+    </div>
+    <div class="chars-grid" id="charsGrid"></div>
+    <div class="chars-hidden-note" id="charsHiddenNote"></div>
+  </section>
+
+  <!-- ─── 时间线 ─── -->
+  <section class="panel" id="panel-timeline">
+    <div class="tl-toolbar">
+      <div class="tl-note" id="tlNote"></div>
+      <button class="btn-ghost" id="btnFullTimeline">📖 查看全书时间线</button>
+    </div>
+    <div class="tl-list" id="tlList"></div>
+  </section>
+
+  <!-- ─── 问 AI ─── -->
+  <section class="panel" id="panel-ask">
+    <div class="ask-intro" id="askIntro"></div>
+    <div class="ask-chips" id="askChips"></div>
+    <div class="ask-log" id="askLog"></div>
+    <div class="ask-input-row">
+      <input class="ask-input" id="askInput" placeholder="问点已读内容：「XXX 是谁？」「A 和 B 什么关系？」「第 N 章发生了什么？」">
+      <button class="btn-primary" id="askSend">发送</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════ 角色卡片 ══════════ -->
+<div class="modal-mask" id="charModal" hidden>
+  <div class="char-card" id="charCard"></div>
+</div>
+
+<!-- ══════════ 悬停迷你卡 ══════════ -->
+<div id="hoverCard" class="hover-card" hidden></div>
+
+<!-- ══════════ 确认弹窗 ══════════ -->
+<div class="modal-mask" id="confirmModal" hidden>
+  <div class="confirm-card">
+    <div class="confirm-title" id="confirmTitle"></div>
+    <div class="confirm-text" id="confirmText"></div>
+    <div class="confirm-btns">
+      <button class="btn-ghost" id="confirmNo">取消</button>
+      <button class="btn-primary" id="confirmYes">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 设置弹窗 ══════════ -->
+<div class="modal-mask" id="settingsModal" hidden>
+  <div class="confirm-card">
+    <div class="confirm-title">阅读设置</div>
+    <div class="settings-body">
+      <div class="settings-row"><span>当前进度</span><b id="setProgressText"></b></div>
+      <div class="settings-row"><span>防剧透边界</span><b id="setThresholdText"></b></div>
+      <div class="settings-row"><span>原文名显示</span>
+        <select id="setOrigName" class="mini-select">
+          <option value="always">始终显示</option>
+          <option value="first">仅首次</option>
+          <option value="never">不显示</option>
+        </select>
+      </div>
+      <button class="btn-ghost" id="btnResetProgress">↺ 重置阅读进度（回到第 1 章）</button>
+    </div>
+    <div class="confirm-btns"><button class="btn-primary" id="settingsClose">完成</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/vis-network.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Preprocessed data & build artifacts
+百年孤独.bookpack
+百年孤独.bookpack_build/
+百年孤独cleaned/
+生命中不能承受之轻_work/
+生命中不能承受之轻.epub
+
+# Unrelated
+图片裁切工具.html
+
+# OS
+.DS_Store
+Thumbs.db

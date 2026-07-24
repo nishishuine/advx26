@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>藏书阁 · AI 阅读伴侣</title>
+<style>
+/* ═══════════════════════════════════════════
+   藏书阁 · 书架 — 暖纸质感 + 暗夜模式
+   与阅读器同一套色彩语言
+   自适应布局：根据视口宽高动态计算每排几本、每页几排
+   无横向/竖向滚动
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#f4ecdc;
+  --bg2:#eee3cd;
+  --paper:#fdfaf1;
+  --paper2:#f8f1e1;
+  --ink:#2a2218;
+  --ink2:#4a3f2e;
+  --muted:#948668;
+  --line:#e4d8c0;
+  --line2:#d8caa8;
+  --gold:#b8860b;
+  --gold2:#c9a227;
+  --indigo:#232b5c;
+  --serif:"Songti SC","STSong","SimSun","Noto Serif CJK SC","Source Han Serif SC",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  --plank-h:13px;
+  --bw:140px;   /* 书宽 */
+  --bh:210px;   /* 书高 */
+  --slots-gap:34px;
+  --row-pad-x:18px;
+  --row-mb:16px;
+}
+[data-theme="dark"]{
+  --bg:#15120c;
+  --bg2:#1b1710;
+  --paper:#221d14;
+  --paper2:#2a2418;
+  --ink:#ece2cd;
+  --ink2:#c8bca0;
+  --muted:#8a7d62;
+  --line:#383022;
+  --line2:#463a26;
+  --gold:#d4a02a;
+  --gold2:#e0b440;
+  --indigo:#5b6aa8;
+}
+
+html{height:100%;overflow:hidden}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 15% -5%,rgba(184,134,11,.07),transparent 60%),
+    radial-gradient(900px 500px at 90% 10%,rgba(35,43,92,.06),transparent 55%);
+  background-attachment:fixed;
+  color:var(--ink);
+  height:100vh;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+[data-theme="dark"] body{
+  background-image:
+    radial-gradient(1200px 600px at 15% -5%,rgba(212,160,42,.06),transparent 60%),
+    radial-gradient(900px 500px at 90% 10%,rgba(91,106,168,.07),transparent 55%);
+}
+/* 纸纹 */
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+  opacity:.035;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] body::after{mix-blend-mode:screen;opacity:.05}
+
+[hidden]{display:none!important}
+
+/* ── 页眉 ── */
+.shelf-head{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding:32px 32px 0;
+}
+.brand-kicker{
+  color:var(--gold);font-size:11px;font-weight:600;letter-spacing:3px;
+  text-transform:uppercase;margin-bottom:10px;
+  display:flex;align-items:center;gap:10px;
+}
+.brand-kicker::before,.brand-kicker::after{content:"";width:26px;height:1px;background:var(--line2)}
+.brand-title{
+  font-family:var(--serif);font-size:42px;font-weight:900;
+  letter-spacing:14px;line-height:1;color:var(--ink);
+}
+.head-right{display:flex;align-items:center;gap:10px;padding-bottom:6px}
+.icon-btn{
+  background:transparent;border:1px solid var(--line2);width:38px;height:38px;
+  border-radius:10px;font-size:16px;cursor:pointer;color:var(--ink2);
+  display:flex;align-items:center;justify-content:center;transition:all .18s;
+}
+.icon-btn:hover{border-color:var(--gold);color:var(--gold);transform:translateY(-1px)}
+.up-btn{
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#fff;border:none;height:38px;padding:0 16px;border-radius:10px;
+  font-size:13px;font-weight:600;letter-spacing:1px;cursor:pointer;
+  box-shadow:0 2px 8px rgba(184,134,11,.3);
+  transition:transform .15s,box-shadow .15s;
+  display:flex;align-items:center;gap:6px;
+}
+.up-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(184,134,11,.4)}
+
+/* ── 搁板舞台 ── */
+.stage{
+  flex:1;display:flex;flex-direction:column;justify-content:center;
+  overflow:hidden;min-height:0;
+  padding:20px 32px 0;
+}
+.shelf-row{position:relative;padding:0 var(--row-pad-x);margin-bottom:var(--row-mb)}
+.shelf-row:last-child{margin-bottom:0}
+
+/* 木搁板 */
+.plank{
+  position:absolute;left:-4px;right:-4px;height:var(--plank-h);
+  bottom:70px;z-index:1;border-radius:3px;
+  background:linear-gradient(to bottom,#c49a68 0%,#a67c4e 18%,#8a6640 55%,#6d4f31 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,239,214,.5),
+    inset 0 -2px 3px rgba(50,32,12,.45),
+    0 14px 26px rgba(60,40,15,.28),
+    0 3px 8px rgba(60,40,15,.20);
+}
+/* 搁板上沿的一道描金 */
+.plank::before{
+  content:"";position:absolute;left:10px;right:10px;top:2px;height:1px;
+  background:linear-gradient(to right,transparent,rgba(224,180,64,.55) 20%,rgba(224,180,64,.55) 80%,transparent);
+}
+/* 搁板在墙上的投影 */
+.plank-shadow{
+  position:absolute;left:8px;right:8px;z-index:0;
+  bottom:calc(70px - 30px);height:30px;
+  background:radial-gradient(ellipse at center,rgba(50,32,10,.20),transparent 70%);
+  filter:blur(6px);
+}
+[data-theme="dark"] .plank{
+  background:linear-gradient(to bottom,#7d5c3a 0%,#5f4429 30%,#47321e 100%);
+  box-shadow:inset 0 1px 0 rgba(220,190,140,.25),inset 0 -2px 3px rgba(0,0,0,.5),0 14px 26px rgba(0,0,0,.5),0 3px 8px rgba(0,0,0,.4);
+}
+[data-theme="dark"] .plank-shadow{background:radial-gradient(ellipse at center,rgba(0,0,0,.5),transparent 70%)}
+
+.slots{
+  position:relative;z-index:2;
+  display:flex;justify-content:center;align-items:flex-end;
+  gap:var(--slots-gap);
+}
+.slot{
+  display:flex;flex-direction:column;align-items:center;
+  width:var(--bw);
+  animation:slotIn .7s cubic-bezier(.22,.61,.36,1) both;
+  animation-delay:var(--d,0ms);
+}
+@keyframes slotIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+
+/* 书后暖光 */
+.book-wrap{position:relative}
+.book-wrap::before{
+  content:"";position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+  width:230px;height:270px;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(224,178,60,.15),transparent 65%);
+  transition:opacity .4s;
+}
+[data-theme="dark"] .book-wrap::before{background:radial-gradient(ellipse at center,rgba(224,178,60,.10),transparent 65%)}
+.book-wrap:hover::before{opacity:1.6}
+
+/* ── 3D 书 ── */
+.book{
+  --t:12px;
+  position:relative;z-index:1;
+  width:var(--bw);height:var(--bh);
+  transform-style:preserve-3d;
+  transform:rotateY(-22deg) rotateX(2deg);
+  transition:transform .5s cubic-bezier(.22,.61,.36,1);
+  cursor:pointer;
+}
+.book-wrap:hover .book{transform:rotateY(-12deg) rotateX(2deg) translateY(-10px)}
+.face{position:absolute}
+.face.front{
+  inset:0;transform:translateZ(var(--t));
+  border-radius:2px 4px 4px 2px;overflow:hidden;
+  background:var(--paper2);
+  box-shadow:inset 0 0 0 1px rgba(60,40,10,.12);
+}
+.face.front img{width:100%;height:100%;object-fit:cover;display:block}
+/* 封面书脊侧的一道压痕高光 */
+.face.front::after{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:12px;
+  background:linear-gradient(to right,rgba(0,0,0,.22),rgba(255,255,255,.06) 55%,transparent);
+}
+.face.back{
+  inset:0;transform:rotateY(180deg) translateZ(var(--t));
+  border-radius:4px 2px 2px 4px;
+  background:var(--spine,#4a3b28);
+}
+.face.spine{
+  top:0;bottom:0;left:calc(var(--t) * -1);width:calc(var(--t) * 2);
+  transform:rotateY(90deg);
+  border-radius:2px 0 0 2px;
+  background:linear-gradient(to right,
+    color-mix(in srgb,var(--spine,#4a3b28) 62%,#000) 0%,
+    var(--spine,#4a3b28) 45%,
+    color-mix(in srgb,var(--spine,#4a3b28) 78%,#000) 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.face.spine span{
+  writing-mode:vertical-rl;font-family:var(--serif);
+  font-size:9px;letter-spacing:2px;color:rgba(255,244,220,.9);
+  text-shadow:0 1px 1px rgba(0,0,0,.4);
+  max-height:88%;overflow:hidden;white-space:nowrap;
+}
+.face.pages{
+  top:3px;bottom:3px;right:calc((var(--t) - 1px) * -1);width:calc(var(--t) * 2 - 2px);
+  transform:rotateY(90deg);
+  background:repeating-linear-gradient(to right,#f3ead6 0 2px,#ddd2b8 2px 3px);
+  border-radius:0 2px 2px 0;
+}
+/* 落地影 */
+.book-shadow{
+  position:absolute;left:2%;right:2%;bottom:-11px;height:22px;z-index:0;
+  background:radial-gradient(ellipse at 42% 50%,rgba(45,30,10,.42),transparent 68%);
+  filter:blur(5px);
+  transition:all .5s cubic-bezier(.22,.61,.36,1);
+}
+.book-wrap:hover .book-shadow{left:-6%;right:12%;opacity:.75;transform:translateY(4px)}
+[data-theme="dark"] .book-shadow{background:radial-gradient(ellipse at 42% 50%,rgba(0,0,0,.6),transparent 68%)}
+
+/* 悬停纱罩：只露标题与入口 */
+.veil{
+  position:absolute;inset:0;z-index:2;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:14px 12px;
+  background:linear-gradient(to top,rgba(24,17,7,.84) 0%,rgba(24,17,7,.30) 46%,transparent 72%);
+  opacity:0;transition:opacity .35s;
+  border-radius:2px 4px 4px 2px;
+}
+.book-wrap:hover .veil{opacity:1}
+.veil-title{font-family:var(--serif);font-size:15px;font-weight:800;color:#f6eedb;letter-spacing:1px;line-height:1.35}
+.veil-author{font-size:10px;color:rgba(246,238,219,.75);margin-top:3px}
+.veil-go{
+  margin-top:8px;align-self:flex-start;
+  font-size:11px;font-weight:600;letter-spacing:1px;
+  color:#1d1507;background:linear-gradient(135deg,var(--gold2),var(--gold));
+  padding:4px 11px;border-radius:20px;
+  transform:translateY(6px);transition:transform .35s;
+}
+.book-wrap:hover .veil-go{transform:none}
+/* 上传书的下架钮 */
+.veil-x{
+  position:absolute;top:8px;right:8px;
+  width:24px;height:24px;border-radius:50%;
+  background:rgba(246,238,219,.16);color:#f6eedb;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;cursor:pointer;transition:background .15s;
+}
+.veil-x:hover{background:#c0392b}
+
+/* ── 进度铭牌 ── */
+.plaque{
+  margin-top:10px;width:100%;height:32px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.pbar{
+  width:100%;height:3px;border-radius:2px;
+  background:color-mix(in srgb,var(--line2) 70%,transparent);
+  position:relative;overflow:visible;
+}
+.pbar i{
+  position:absolute;left:0;top:0;bottom:0;border-radius:2px;
+  background:linear-gradient(to right,var(--gold),var(--gold2));
+  box-shadow:0 0 6px rgba(201,162,39,.5);
+  width:0;transition:width 1s cubic-bezier(.22,.61,.36,1) .3s;
+}
+.pbar i::after{
+  content:"";position:absolute;right:-3.5px;top:50%;transform:translateY(-50%);
+  width:7px;height:7px;border-radius:50%;
+  background:var(--gold2);box-shadow:0 0 0 2px var(--paper),0 0 8px rgba(201,162,39,.8);
+}
+.pbar i.done{background:linear-gradient(to right,#2e7d32,#57a05c)}
+.pbar i.done::after{background:#57a05c;box-shadow:0 0 0 2px var(--paper),0 0 8px rgba(87,160,92,.8)}
+.pmeta{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.pmeta b{font-family:var(--serif);font-size:16px;font-weight:800;color:var(--gold);letter-spacing:1px}
+.pmeta span{font-size:10px;color:var(--muted);letter-spacing:.5px}
+
+/* 骨架：载入失败占位 */
+.book.placeholder .face.front{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(150deg,var(--paper2),var(--bg2));
+}
+.ph-title{font-family:var(--serif);font-size:14px;font-weight:700;color:var(--ink2);text-align:center;padding:0 10px;letter-spacing:2px}
+.ph-sub{font-size:9px;color:var(--muted);letter-spacing:2px}
+
+/* 空架 */
+.empty{text-align:center;padding:60px 0;color:var(--muted);font-size:14px;letter-spacing:1px}
+
+/* ── 翻页 ── */
+.pager{
+  display:flex;align-items:center;justify-content:center;gap:16px;
+  padding:18px 0 4px;
+}
+.page-btn{
+  background:var(--paper2);border:1px solid var(--line2);
+  width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;
+  color:var(--ink2);transition:all .15s;display:flex;align-items:center;justify-content:center;
+}
+.page-btn:hover:not(:disabled){background:var(--gold);color:#fff;border-color:var(--gold);transform:scale(1.08)}
+.page-btn:disabled{opacity:.3;cursor:not-allowed}
+.page-ind{font-size:12px;color:var(--muted);min-width:70px;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:1px}
+.page-ind b{color:var(--gold);font-weight:600;font-family:var(--serif);font-size:15px}
+
+/* ── 页脚 ── */
+.shelf-foot{
+  text-align:center;padding:12px 24px 20px;
+  animation:slotIn 1s .5s both;
+}
+.foot-quote{font-family:var(--serif);font-size:14px;color:var(--muted);letter-spacing:2px}
+.foot-quote b{color:var(--gold);font-weight:600}
+.foot-orn{margin-top:10px;color:var(--line2);font-size:13px;letter-spacing:10px}
+
+/* ── 拖拽上架 ── */
+.drop-veil{
+  position:fixed;inset:0;z-index:100;
+  background:color-mix(in srgb,var(--bg) 78%,transparent);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;
+}
+.drop-box{
+  border:2px dashed var(--gold);border-radius:20px;
+  padding:44px 64px;text-align:center;
+  background:var(--paper);
+}
+.drop-t{font-family:var(--serif);font-size:22px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.drop-s{margin-top:8px;font-size:12px;color:var(--muted);letter-spacing:1px}
+
+/* ── toast ── */
+.toast{
+  position:fixed;bottom:34px;left:50%;transform:translateX(-50%);
+  z-index:120;background:var(--ink);color:var(--paper);
+  padding:10px 22px;border-radius:24px;font-size:13px;
+  box-shadow:0 8px 32px rgba(60,45,20,.16);
+  animation:slotIn .25s ease;
+}
+
+/* ── 手机端 ── */
+@media(max-width:640px){
+  :root{--bw:126px;--bh:189px;--slots-gap:26px;--row-pad-x:8px;--row-mb:12px}
+  .brand-title{font-size:30px;letter-spacing:8px}
+  .shelf-head{padding:20px 16px 0}
+  .stage{padding:12px 16px 0}
+  .plank{bottom:66px}
+  .plank-shadow{bottom:calc(66px - 26px)}
+  .up-btn span{display:none}
+}
+</style>
+</head>
+<body data-theme="light">
+
+<header class="shelf-head">
+  <div>
+    <div class="brand-kicker">AI 阅读伴侣</div>
+    <h1 class="brand-title">藏书阁</h1>
+  </div>
+  <div class="head-right">
+    <button class="up-btn" id="btnUpload" title="上传 .bookpack 书包">＋<span> 上架书籍</span></button>
+    <input type="file" id="fileInput" accept=".bookpack,.zip" multiple hidden>
+    <button class="icon-btn" id="btnTheme" title="切换明/暗">🌙</button>
+  </div>
+</header>
+
+<main class="stage" id="stage"></main>
+
+<div class="pager" id="pager" hidden>
+  <button class="page-btn" id="pgPrev" title="上一页">‹</button>
+  <span class="page-ind" id="pgInd"></span>
+  <button class="page-btn" id="pgNext" title="下一页">›</button>
+</div>
+
+<footer class="shelf-foot">
+  <div class="foot-quote">「过去都是假的，回忆是一条没有归途的路。」 —— <b>《百年孤独》</b></div>
+  <div class="foot-orn">❦ ❦ ❦</div>
+</footer>
+
+<!-- 拖拽上架遮罩 -->
+<div class="drop-veil" id="dropVeil" hidden>
+  <div class="drop-box">
+    <div class="drop-t">松开，把书包放上架子</div>
+    <div class="drop-s">支持 .bookpack 文件 · 可一次多本</div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="vendor/jszip.min.js"></script>
+<script src="upload-store.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+
+/* ── 默认书目：这两本；演示用 ×7 重复（共 14 本看排布效果） ── */
+const DEFAULT_BOOKS=[
+  {file:"百年孤独.bookpack",            open:"index.html"},
+  {file:"生命中不能承受之轻.bookpack",   open:"index.html?pack="+encodeURIComponent("生命中不能承受之轻.bookpack")},
+];
+const DEMO_REPEAT=7;
+const SHELF_BOOKS=Array.from({length:DEMO_REPEAT},()=>DEFAULT_BOOKS).flat();
+
+const DEFAULT_TOTAL=20;
+
+/* 自适应布局：基于容器实际尺寸计算每排几本、每页几排 */
+function calcLayout(){
+  const stage=$("#stage");
+  if(!stage||stage.clientWidth===0)return{perRow:5,rows:3,pageSize:15};
+  const root=document.documentElement;
+  const rcs=getComputedStyle(root);
+  const bw=parseInt(rcs.getPropertyValue('--bw'))||140;
+  const gap=parseInt(rcs.getPropertyValue('--slots-gap'))||34;
+  const rowPad=parseFloat(rcs.getPropertyValue('--row-pad-x'))||18;
+  const slotW=bw+gap;
+  const perRow=Math.max(1,Math.floor((stage.clientWidth-rowPad*2+gap)/slotW));
+  /* 高度：书高 + 铭牌 + shelf-row margin-bottom */
+  const bh=parseInt(rcs.getPropertyValue('--bh'))||210;
+  const plaqueH=10+32; /* margin-top + height */
+  const rowGap=parseFloat(rcs.getPropertyValue('--row-mb'))||16;
+  const rowH=bh+plaqueH+rowGap;
+  const stageCs=getComputedStyle(stage);
+  const stagePadV=parseFloat(stageCs.paddingTop);
+  const availH=stage.clientHeight-stagePadV;
+  const rows=Math.min(3,Math.max(1,Math.floor(availH/rowH)));
+  return{perRow,rows,pageSize:perRow*rows};
+}
+
+/* 与 app.js 同一套进度 key 规则 */
+function progressKey(file){
+  return file==="百年孤独.bookpack" ? "rc-buddy-cien-anos-v2"
+       : "rc-buddy-"+file.replace(/\.bookpack$/i,"");
+}
+function readProgress(file,total){
+  try{
+    const p=JSON.parse(localStorage.getItem(progressKey(file))||"null");
+    if(!p)return {pct:0,ch:0};
+    const ch=(p.threshold&&p.threshold.chapter)||p.chapter||0;
+    if(!ch)return {pct:0,ch:0};
+    return {pct:Math.min(100,Math.round(ch/total*100)), ch};
+  }catch(e){return {pct:0,ch:0};}
+}
+
+/* ── 主题 ── */
+const TKEY="rc-shelf-dark";
+function applyTheme(){
+  const dark=localStorage.getItem(TKEY)==="1";
+  document.body.dataset.theme=dark?"dark":"light";
+  $("#btnTheme").textContent=dark?"☀️":"🌙";
+}
+$("#btnTheme").addEventListener("click",()=>{
+  localStorage.setItem(TKEY,document.body.dataset.theme==="dark"?"0":"1");
+  applyTheme();
+});
+applyTheme();
+
+/* ── toast ── */
+let toastTimer=null;
+function toast(msg){
+  const t=$("#toast");t.textContent=msg;t.hidden=false;
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,2600);
+}
+
+/* ── 解包：取 book.json + 封面 ── */
+async function metaFromZip(zip,fallbackTitle){
+  const meta={title:fallbackTitle,author:"",total:DEFAULT_TOTAL,cover:null};
+  const bf=zip.file("book.json");
+  if(!bf)return meta;
+  const b=JSON.parse(await bf.async("string"));
+  meta.title=b.title||meta.title;
+  meta.author=b.author||"";
+  meta.total=b.total_chapters||(b.chapters?b.chapters.length:DEFAULT_TOTAL);
+  const coverPath=b.cover||"cover.svg";
+  const cf=zip.file(coverPath)||zip.file("cover.svg")||zip.file("cover.jpg")||zip.file("cover.png");
+  if(cf){
+    const ext=coverPath.split(".").pop().toLowerCase();
+    const mime={png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",svg:"image/svg+xml",webp:"image/webp"}[ext]||"image/jpeg";
+    meta.cover=URL.createObjectURL(new Blob([await cf.async("blob")],{type:mime}));
+  }
+  return meta;
+}
+async function loadBook(entry){
+  const fallback=entry.file.replace(/^upload:/,"").replace(/\.bookpack$/i,"");
+  const meta={title:fallback,author:"",total:DEFAULT_TOTAL,cover:null,failed:false};
+  try{
+    if(typeof JSZip==="undefined")throw 0;
+    let buf;
+    if(entry.file.startsWith("upload:")){
+      buf=await PackStore.get(entry.file.slice(7));
+      if(!buf)throw 0;
+    }else{
+      const res=await fetch(encodeURI(entry.file));
+      if(!res.ok)throw 0;
+      buf=await res.arrayBuffer();
+    }
+    const zip=await JSZip.loadAsync(buf);
+    Object.assign(meta,await metaFromZip(zip,fallback));
+  }catch(e){meta.failed=true;}
+  return meta;
+}
+
+/* ── 从封面取样书脊色 ── */
+function sampleSpineColor(url){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const c=document.createElement("canvas");c.width=8;c.height=32;
+        const x=c.getContext("2d");x.drawImage(img,0,0,8,32);
+        const d=x.getImageData(0,0,4,32).data;
+        let r=0,g=0,b=0,n=0;
+        for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];n++;}
+        resolve(`rgb(${Math.round(r/n)},${Math.round(g/n)},${Math.round(b/n)})`);
+      }catch(e){resolve(null);}
+    };
+    img.onerror=()=>resolve(null);
+    img.src=url;
+  });
+}
+const SPINE_PALETTE=["#3a3226","#2c3050","#4a2e2a","#2f4231","#413427","#332e3e"];
+function hashSpine(title){
+  let h=0;for(const ch of title)h=(h*31+ch.charCodeAt(0))>>>0;
+  return SPINE_PALETTE[h%SPINE_PALETTE.length];
+}
+
+/* ── 渲染 ── */
+let ENTRIES=[],METAS={},PAGE=0;
+
+async function refreshEntries(){
+  const ups=await PackStore.keys();
+  ENTRIES=SHELF_BOOKS.concat(ups.map(name=>({
+    file:"upload:"+name,
+    open:"index.html?pack="+encodeURIComponent("upload:"+name),
+    upload:true,name
+  })));
+}
+
+function slotHTML(entry,i){
+  const meta=METAS[entry.file]||{title:entry.file,total:DEFAULT_TOTAL,spine:hashSpine(entry.file)};
+  const prog=readProgress(entry.file,meta.total);
+  const cover=meta.cover
+    ? `<img src="${meta.cover}" alt="${meta.title}">`
+    : `<div class="ph-title">${meta.title}</div><div class="ph-sub">书包未就位</div>`;
+  const label = prog.ch===0 ? "尚未开始"
+    : prog.pct>=100 ? "已读完"
+    : `读至第 ${prog.ch} 章 · 共 ${meta.total} 章`;
+  const go    = prog.ch===0 ? "开始阅读" : "继续阅读";
+  return `
+  <div class="slot" style="--d:${Math.min(i,10)*70}ms">
+    <div class="book-wrap" data-open="${entry.open}" title="${meta.title}">
+      <div class="book ${meta.cover?"":"placeholder"}" style="--spine:${meta.spine}">
+        <div class="face back"></div>
+        <div class="face spine"><span>${meta.title}</span></div>
+        <div class="face pages"></div>
+        <div class="face front">${cover}
+          <div class="veil">
+            ${entry.upload?`<div class="veil-x" data-del="${entry.name}" title="从书架移除">×</div>`:""}
+            <div class="veil-title">${meta.title}</div>
+            ${meta.author?`<div class="veil-author">${meta.author}</div>`:""}
+            <div class="veil-go">${go} →</div>
+          </div>
+        </div>
+      </div>
+      <div class="book-shadow"></div>
+    </div>
+    <div class="plaque">
+      <div class="pbar"><i class="${prog.pct>=100?"done":""}" data-w="${prog.pct}"></i></div>
+      <div class="pmeta"><b>${prog.pct}%</b><span>${label}</span></div>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const {perRow,pageSize}=calcLayout();
+  const pages=Math.max(1,Math.ceil(ENTRIES.length/pageSize));
+  PAGE=Math.min(Math.max(PAGE,0),pages-1);
+  const slice=ENTRIES.slice(PAGE*pageSize,(PAGE+1)*pageSize);
+
+  const rows=[];
+  for(let r=0;r<slice.length;r+=perRow)rows.push(slice.slice(r,r+perRow));
+
+  $("#stage").innerHTML=rows.map((row,ri)=>`
+    <div class="shelf-row">
+      <div class="slots">${row.map((x,i)=>slotHTML(x,ri*perRow+i)).join("")}</div>
+      <div class="plank"></div>
+      <div class="plank-shadow"></div>
+    </div>`).join("")||`<div class="empty">书架上还空无一物</div>`;
+
+  $("#pager").hidden=pages<=1;
+  $("#pgInd").innerHTML=`<b>${PAGE+1}</b> / ${pages}`;
+  $("#pgPrev").disabled=PAGE<=0;
+  $("#pgNext").disabled=PAGE>=pages-1;
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll(".pbar i").forEach(el=>{el.style.width=el.dataset.w+"%";});
+  }));
+  document.querySelectorAll(".book-wrap").forEach(el=>{
+    el.addEventListener("click",()=>{location.href=el.dataset.open;});
+  });
+  document.querySelectorAll("[data-del]").forEach(el=>{
+    el.addEventListener("click",async e=>{
+      e.stopPropagation();
+      if(!confirm(`把《${el.dataset.del.replace(/\.bookpack$/i,"")}》从书架移除？（不会删除本地文件）`))return;
+      await PackStore.del(el.dataset.del);
+      localStorage.removeItem(progressKey("upload:"+el.dataset.del));
+      await refreshEntries();
+      render();
+      toast("已下架");
+    });
+  });
+}
+
+$("#pgPrev").addEventListener("click",()=>{PAGE--;render();});
+$("#pgNext").addEventListener("click",()=>{PAGE++;render();});
+
+/* 窗口 resize 自适应重排（防抖） */
+let resizeTimer;
+window.addEventListener("resize",()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(render,120);
+});
+
+/* ── 上架 ── */
+async function handleFiles(files){
+  const packs=[...files].filter(f=>/\.(bookpack|zip)$/i.test(f.name));
+  if(!packs.length){toast("请选择 .bookpack 文件");return;}
+  for(const f of packs){
+    try{
+      await PackStore.put(f.name,await f.arrayBuffer());
+      toast(`已上架《${f.name.replace(/\.bookpack$/i,"")}》`);
+    }catch(e){toast(`《${f.name}》上架失败`);}
+  }
+  await refreshEntries();
+  await ensureMetas(ENTRIES.filter(e=>!METAS[e.file]));
+  render();
+}
+$("#btnUpload").addEventListener("click",()=>$("#fileInput").click());
+$("#fileInput").addEventListener("change",e=>{handleFiles(e.target.files);e.target.value="";});
+
+/* 拖拽上架 */
+let dragDepth=0;
+window.addEventListener("dragenter",e=>{e.preventDefault();dragDepth++;$("#dropVeil").hidden=false;});
+window.addEventListener("dragleave",e=>{e.preventDefault();if(--dragDepth<=0){dragDepth=0;$("#dropVeil").hidden=true;}});
+window.addEventListener("dragover",e=>e.preventDefault());
+window.addEventListener("drop",e=>{
+  e.preventDefault();dragDepth=0;$("#dropVeil").hidden=true;
+  if(e.dataTransfer&&e.dataTransfer.files.length)handleFiles(e.dataTransfer.files);
+});
+
+/* ── 启动 ── */
+async function ensureMetas(entries){
+  await Promise.all(entries.map(async e=>{
+    const m=await loadBook(e);
+    m.spine = m.cover ? (await sampleSpineColor(m.cover))||hashSpine(m.title) : hashSpine(m.title);
+    METAS[e.file]=m;
+  }));
+}
+async function boot(){
+  $("#stage").innerHTML=`<div class="empty">正在上架…</div>`;
+  await refreshEntries();
+  await ensureMetas(ENTRIES);
+  render();
+  /* 一本都没取到：多半是没用本地服务打开（静态预览/file:// 拿不到 .bookpack） */
+  const anyOk=ENTRIES.some(e=>!METAS[e.file]||!METAS[e.file].failed);
+  if(ENTRIES.length&&!anyOk){
+    const tip=document.createElement("div");
+    tip.style.cssText="margin:8px 32px 0;padding:10px 16px;font-size:13px;line-height:1.6;color:var(--ink2);background:var(--paper);border:1px solid var(--line2);border-left:3px solid var(--gold);border-radius:10px";
+    tip.innerHTML=`书包没有加载成功：当前页面不是通过本地服务打开的（静态预览或 file:// 拿不到 .bookpack）。<br>请在 <b>reader/</b> 目录运行 <code style="background:var(--paper2);padding:1px 6px;border-radius:4px">python3 -m http.server 8765</code>，然后访问 <b>http://localhost:8765/bookshelf.html</b>`;
+    $("#stage").after(tip);
+  }
+}
+boot();
+})();
+</script>
+</body>
+</html>

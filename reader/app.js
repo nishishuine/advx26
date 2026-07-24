@@ -10,6 +10,7 @@ const $$=s=>document.querySelectorAll(s);
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const SENT_RE=/[^。！？!?；;：:…」”』\n]+[。！？!?；;：:…」”』\n]*/g;
 const PAGE_GAP=56;
+let SPAN=0;
 
 let zip=null,manifest,book,theme,aliasMap;
 let chars=[],charById={},graph={nodes:[],edges:[]};
@@ -27,7 +28,13 @@ const S={
   paginating:false
 };
 
-const PKEY="rc-buddy-cien-anos-v2";
+const PACK_FILE=(()=>{
+  try{const q=new URLSearchParams(location.search).get("pack");
+    if(q&&/^(upload:)?[^/\\?%*|"<>]+\.bookpack$/i.test(q))return q;
+  }catch(e){}
+  return "百年孤独.bookpack";
+})();
+const PKEY=PACK_FILE==="百年孤独.bookpack"?"rc-buddy-cien-anos-v2":("rc-buddy-"+PACK_FILE.replace(/\.bookpack$/i,""));
 function savePrefs(){
   try{localStorage.setItem(PKEY,JSON.stringify({
     chapter:S.chapter,threshold:S.threshold,origMode:S.origMode,dark:S.dark,
@@ -49,9 +56,18 @@ function loadPrefs(){
 document.addEventListener("DOMContentLoaded",async()=>{
   loadPrefs();applyTheme();bindUI();
   try{
-    const res=await fetch("百年孤独.bookpack");
-    if(!res.ok)throw 0;
-    await loadPack(await res.arrayBuffer());
+    const disp=PACK_FILE.replace(/^upload:/i,"").replace(/\.bookpack$/i,"");
+    $("#bootText").textContent=`正在打开《${disp}》书包…`;
+    if(PACK_FILE.startsWith("upload:")){
+      if(typeof PackStore==="undefined")throw 0;
+      const buf=await PackStore.get(PACK_FILE.slice(7));
+      if(!buf)throw 0;
+      await loadPack(buf);
+    }else{
+      const res=await fetch(encodeURI(PACK_FILE));
+      if(!res.ok)throw 0;
+      await loadPack(await res.arrayBuffer());
+    }
   }catch(e){
     if(typeof EMBEDDED_PACK==="string"&&EMBEDDED_PACK.length>100){
       try{
@@ -59,8 +75,8 @@ document.addEventListener("DOMContentLoaded",async()=>{
         const buf=new Uint8Array(bin.length);
         for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
         await loadPack(buf.buffer);
-      }catch(e2){showBootError("书包加载失败");enableDrop();}
-    }else{showBootError("未能加载内置书包，请拖入 .bookpack 文件");enableDrop();}
+      }catch(e2){showBootError(`未能加载书包「${PACK_FILE}」——请通过本地服务打开本页（在 reader/ 目录运行 python3 -m http.server 8765 后访问 localhost:8765），或直接拖入 .bookpack 文件`);enableDrop();}
+    }else{showBootError(`未能加载书包「${PACK_FILE}」——请通过本地服务打开本页（在 reader/ 目录运行 python3 -m http.server 8765 后访问 localhost:8765），或直接拖入 .bookpack 文件`);enableDrop();}
   }
 });
 function showBootError(msg){$("#bootText").textContent=msg;$(".boot-spinner").style.display="none";}
@@ -304,39 +320,39 @@ async function renderChapter(){
 
 function initPagination(){
   const pages=$("#readerPages"),content=$("#chapterContent");
-  const pw=pages.clientWidth-6;  // 减6px留右边距，防右边缘裁字
+  const pw=pages.clientWidth-12;  // 减12px留右边距，防右边缘裁字
   if(pw<=0)return;
+  SPAN=pw+PAGE_GAP;
   content.style.columnWidth=pw+"px";
   content.style.columnGap=PAGE_GAP+"px";
   content.style.transform="none";
   const totalW=content.scrollWidth;
-  S.totalPages=Math.max(1,Math.round((totalW+PAGE_GAP)/(pw+PAGE_GAP)));
-  computePageMapping(pw);
+  S.totalPages=Math.max(1,Math.round((totalW+PAGE_GAP)/SPAN));
+  computePageMapping();
   $("#pageIndicator").innerHTML=`<b>1</b> / ${S.totalPages}`;
 }
 
-function computePageMapping(pw){
+function computePageMapping(){
   S.pageChars=[];S.pageSents=[];
   const container=$("#readerPages");
   const cRect=container.getBoundingClientRect();
   const content=$("#chapterContent");
   const oldT=content.style.transform;
   content.style.transform="none";
-  const span=pw+PAGE_GAP;
   const walk=el=>{
     if(el.nodeType!==1)return;
     if(el.classList){
       if(el.classList.contains("ch")){
         const r=el.getBoundingClientRect();
         const left=r.left-cRect.left;
-        const pg=Math.max(0,Math.min(S.totalPages-1,Math.floor((left+pw/2)/span)));
+        const pg=Math.max(0,Math.min(S.totalPages-1,Math.floor((left+SPAN*0.5)/SPAN)));
         if(!S.pageChars[pg])S.pageChars[pg]=new Set();
         S.pageChars[pg].add(el.dataset.cid);
       }
       if(el.classList.contains("sent")&&el.dataset.sid!==undefined){
         const r=el.getBoundingClientRect();
         const left=r.left-cRect.left;
-        const pg=Math.max(0,Math.min(S.totalPages-1,Math.floor((left+pw/2)/span)));
+        const pg=Math.max(0,Math.min(S.totalPages-1,Math.floor((left+SPAN*0.5)/SPAN)));
         if(!S.pageSents[pg])S.pageSents[pg]=[];
         S.pageSents[pg].push(+el.dataset.sid);
       }
@@ -350,8 +366,7 @@ function computePageMapping(pw){
 function goToPage(idx,advance){
   idx=Math.max(0,Math.min(idx,S.totalPages-1));
   S.page=idx;
-  const pw=$("#readerPages").clientWidth-6;
-  $("#chapterContent").style.transform=`translateX(${-idx*(pw+PAGE_GAP)}px)`;
+  $("#chapterContent").style.transform=`translateX(${-idx*SPAN}px)`;
   $("#pageIndicator").innerHTML=`<b>${idx+1}</b> / ${S.totalPages}`;
   updateAppearedChars();renderLegend();updatePageButtons();
   if(advance!==false)advanceThreshold();

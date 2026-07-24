@@ -250,7 +250,7 @@ body{
 
 /* ── pagination ── */
 .reader-pages{
-  flex:1;overflow:hidden;position:relative;
+  flex:1;overflow:hidden;position:relative;padding:0 6px;
 }
 .chapter-content{
   font-family:var(--serif);font-size:19px;line-height:2.05;color:var(--ink);
@@ -264,7 +264,6 @@ body{
 }
 .chapter-content p{
   margin-bottom:1.4em;text-indent:2em;
-  break-inside:avoid-column;
 }
 .chapter-content p:first-of-type{text-indent:0}
 

@@ -905,7 +905,7 @@ async function sendAsk(){
   log.appendChild(bubble);log.scrollTop=log.scrollHeight;
   ASK.busy=true;$("#askSend").disabled=true;
   const messages=[{role:"system",content:askSystemPrompt()},...ASK.history.slice(-8),{role:"user",content:q}];
-  let acc="";
+  let acc="",autoRead=false;
   try{
     const base=(window.RC_CONFIG&&RC_CONFIG.API_BASE)||"";
     const res=await fetch(base+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages})});
@@ -948,7 +948,7 @@ async function sendAsk(){
       sBtn.className="ask-speak";sBtn.textContent="🔊 朗读回答";
       sBtn.onclick=()=>{if(ASK.speak.on&&ASK.speak.btn===sBtn)stopAskSpeak();else startAskSpeak(sBtn,plain);};
       bubble.appendChild(sBtn);
-      if(fromVoice)startAskSpeak(sBtn,plain);
+      if(fromVoice){startAskSpeak(sBtn,plain);autoRead=true;}
     }
   }catch(err){
     bubble.classList.remove("thinking");
@@ -956,6 +956,8 @@ async function sendAsk(){
   }finally{
     ASK.busy=false;$("#askSend").disabled=false;
     log.scrollTop=log.scrollHeight;
+    /* 唤醒问答模式下：若未自动朗读（如出错），直接开 3 秒追问窗口 */
+    if(VQA.active&&!autoRead)vqaListen(true);
   }
 }
 /* ── 轻量 Markdown 渲染（先转义再排版，防 XSS） ── */
@@ -1064,7 +1066,11 @@ function startAskSpeak(btn,text){
 }
 function askSpeakNext(){
   if(!ASK.speak.on)return;
-  if(ASK.speak.idx>=ASK.speak.parts.length){stopAskSpeak();return;}
+  if(ASK.speak.idx>=ASK.speak.parts.length){
+    stopAskSpeak();
+    if(VQA.active)vqaListen(true); /* 答案读完 → 3 秒追问窗口 */
+    return;
+  }
   const u=new SpeechSynthesisUtterance(ASK.speak.parts[ASK.speak.idx]);
   u.lang="zh-CN";u.rate=S.tts.rate||1;
   if(S.tts.voice)u.voice=S.tts.voice;
@@ -1081,6 +1087,102 @@ function stopAskSpeak(){
 function stopAskVoiceAll(){
   if(ASK.rec)ASK.rec.stop();
   stopAskSpeak();
+  vqaCancel();
+}
+
+/* ── 听书语音唤醒问答（VQA）：听书时连说两声「有问题」进入语音问答，
+   答案读完 3 秒没追问则自动回到听书，有追问则持续对话 ── */
+const VQA={active:false,resumeTTS:false,wake:null,wakeBuf:"",wakeClear:null,rec:null,timer:null,hinted:false};
+function vqaSR(){return window.SpeechRecognition||window.webkitSpeechRecognition;}
+function startWakeListen(){
+  const SR=vqaSR();
+  if(!SR||VQA.wake||VQA.active||!S.tts.playing)return;
+  const rec=new SR();
+  rec.lang="zh-CN";rec.continuous=true;rec.interimResults=true;
+  rec.onresult=e=>{
+    let txt="";
+    for(let i=e.resultIndex;i<e.results.length;i++)txt+=e.results[i][0].transcript;
+    VQA.wakeBuf=(VQA.wakeBuf+txt).slice(-60);
+    clearTimeout(VQA.wakeClear);VQA.wakeClear=setTimeout(()=>VQA.wakeBuf="",4000);
+    if((VQA.wakeBuf.match(/有问题/g)||[]).length>=2){VQA.wakeBuf="";vqaEnter();}
+  };
+  rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed")rec._dead=true;};
+  rec.onend=()=>{ /* Chrome 会定时自动结束识别，听书期间自动重启 */
+    if(VQA.wake===rec)VQA.wake=null;
+    if(!rec._dead&&S.tts.playing&&!VQA.active)setTimeout(startWakeListen,400);
+  };
+  VQA.wake=rec;
+  try{rec.start();}catch(e){VQA.wake=null;}
+}
+function stopWakeListen(){
+  const r=VQA.wake;if(!r)return;
+  VQA.wake=null;r.onend=null;
+  try{r.stop();}catch(e){}
+}
+function vqaEnter(){
+  if(VQA.active)return;
+  VQA.active=true;VQA.resumeTTS=true;
+  stopWakeListen();stopAskSpeak();
+  /* 暂停听书（保留进度，问完可续播） */
+  speechSynthesis.cancel();S.tts.playing=false;S.tts.paused=true;clearSpeaking();
+  const pp=$("#ttsPlayPause");if(pp)pp.textContent="▶";
+  switchTab("ask");
+  toast("🎙 已暂停听书，请说出你的问题");
+  setTimeout(()=>{if(VQA.active)vqaListen(false);},450);
+}
+function vqaListen(quick){
+  if(!VQA.active)return;
+  const SR=vqaSR();if(!SR){vqaExit();return;}
+  const rec=new SR();
+  rec.lang="zh-CN";rec.interimResults=true;rec.continuous=false;
+  let finalText="",got=false;
+  if(quick)VQA.timer=setTimeout(()=>{if(!got)try{rec.stop();}catch(e){}},3200);
+  rec.onstart=()=>{
+    $("#askMic").classList.add("rec");
+    $("#askInput").placeholder=quick?"🎤 继续提问，3 秒无反应回到听书…":"🎤 正在听…说完自动发送";
+  };
+  rec.onspeechstart=()=>{got=true;clearTimeout(VQA.timer);};
+  rec.onresult=e=>{
+    got=true;clearTimeout(VQA.timer);
+    let interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const r=e.results[i];
+      if(r.isFinal)finalText+=r[0].transcript;else interim+=r[0].transcript;
+    }
+    $("#askInput").value=finalText+interim;
+  };
+  rec.onerror=()=>{};
+  rec.onend=()=>{
+    if(VQA.rec===rec)VQA.rec=null;
+    clearTimeout(VQA.timer);
+    $("#askMic").classList.remove("rec");
+    $("#askInput").placeholder="随便问：「XXX 是谁？」「A 和 B 什么关系？」「这本书想表达什么？」";
+    if(!VQA.active)return;
+    const q=($("#askInput").value||"").trim();
+    if(q){ASK.voiceAsk=true;sendAsk();}
+    else vqaExit(); /* 无追问 → 回到听书 */
+  };
+  VQA.rec=rec;
+  try{rec.start();}catch(e){VQA.rec=null;vqaExit();}
+}
+function vqaExit(){
+  if(!VQA.active)return;
+  VQA.active=false;
+  clearTimeout(VQA.timer);
+  if(VQA.rec){const r=VQA.rec;VQA.rec=null;r.onend=null;try{r.stop();}catch(e){}}
+  switchTab("read");
+  if(VQA.resumeTTS){
+    VQA.resumeTTS=false;
+    toast("▶ 继续听书");
+    S.tts.paused=true; /* 强制从暂停处（保留的 idx）续播 */
+    if(!S.tts.playing)toggleTTS();
+  }
+}
+function vqaCancel(){ /* 用户手动离开问答页等：终止但不自动续播 */
+  if(!VQA.active)return;
+  VQA.active=false;VQA.resumeTTS=false;
+  clearTimeout(VQA.timer);
+  if(VQA.rec){const r=VQA.rec;VQA.rec=null;r.onend=null;try{r.stop();}catch(e){}}
 }
 
 /* ═══════ TTS ═══════ */
@@ -1091,7 +1193,7 @@ function toggleTTS(){
   stopAskSpeak(); /* 与问AI朗读互斥 */
   if(S.tts.playing){
     speechSynthesis.cancel();S.tts.playing=false;S.tts.paused=true;
-    clearSpeaking();
+    clearSpeaking();stopWakeListen();
     $("#ttsPlayPause").textContent="▶";
     return;
   }
@@ -1107,6 +1209,8 @@ function toggleTTS(){
   $("#ttsBar").hidden=false;$("#ttsPlayPause").textContent="⏸";
   $("#btnTTS").classList.add("active");
   speakNext();
+  startWakeListen(); /* 听书期间监听唤醒词「有问题有问题」 */
+  if(vqaSR()&&!VQA.hinted){VQA.hinted=true;toast("💡 听书时连说两声「有问题」，可随时语音提问");}
 }
 function speakNext(){
   if(!S.tts.playing)return;
@@ -1122,6 +1226,7 @@ function speakNext(){
 }
 function stopTTS(){
   if(!window.speechSynthesis)return;
+  stopWakeListen();
   S.tts.playing=false;S.tts.paused=false;speechSynthesis.cancel();
   const bar=$("#ttsBar");if(bar)bar.hidden=true;clearSpeaking();
   const pp=$("#ttsPlayPause");if(pp)pp.textContent="▶";

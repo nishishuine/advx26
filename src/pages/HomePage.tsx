@@ -23,6 +23,8 @@ type Attachment = {
   url: string;
 };
 
+type UserIntent = "learn" | "build";
+
 type RecognitionResultLike = {
   0: { transcript: string };
 };
@@ -71,6 +73,7 @@ export function HomePage() {
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [hint, setHint] = useState("");
+  const [intent, setIntent] = useState<UserIntent>("learn");
 
   useEffect(() => {
     attachmentRef.current = attachment;
@@ -188,20 +191,26 @@ export function HomePage() {
     recognitionRef.current?.stop();
     setListening(false);
     setSubmitting(true);
-    setHint("正在把对象整理成关系星图…");
+    setHint(
+      intent === "build"
+        ? "正在准备从零到一的执行教程…"
+        : "正在整理主要部分与关系…",
+    );
 
     const input = `${prompt} ${attachment?.file.name ?? ""}`.toLowerCase();
     const caseId = LIFE_KEYWORDS.some((keyword) => input.includes(keyword))
       ? "leaf"
       : "orange-pi-first-boot";
-    const params = new URLSearchParams({
-      view: "structure",
-      goal: "learn",
-      from: "conversation",
-    });
+    const params = new URLSearchParams({ from: "conversation" });
     if (prompt.trim()) params.set("q", prompt.trim().slice(0, 120));
 
     window.setTimeout(() => {
+      if (intent === "build") {
+        navigate(`/rebuild/${caseId}?${params.toString()}`);
+        return;
+      }
+      params.set("view", "structure");
+      params.set("goal", "learn");
       navigate(`/explore/${caseId}?${params.toString()}`);
     }, 520);
   };
@@ -249,7 +258,37 @@ export function HomePage() {
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
         >
           <h1>你想弄懂什么？</h1>
-          <p>描述一个对象，或放入一张图片。</p>
+          <p>描述一个对象，再选择理解它或亲手做出来。</p>
+        </motion.div>
+
+        <motion.div
+          className="intent-picker"
+          role="group"
+          aria-label="选择目标"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.04 }}
+        >
+          <button
+            type="button"
+            className={intent === "learn" ? "is-active" : ""}
+            aria-pressed={intent === "learn"}
+            onClick={() => setIntent("learn")}
+            disabled={submitting}
+          >
+            <strong>拆开</strong>
+            <span>看主要部分与关系</span>
+          </button>
+          <button
+            type="button"
+            className={intent === "build" ? "is-active" : ""}
+            aria-pressed={intent === "build"}
+            onClick={() => setIntent("build")}
+            disabled={submitting}
+          >
+            <strong>打造</strong>
+            <span>跟着教程从零做到一</span>
+          </button>
         </motion.div>
 
         <motion.form
@@ -309,11 +348,17 @@ export function HomePage() {
             placeholder={
               attachment
                 ? "你想从这张图片里弄懂什么？"
-                : "描述你想彻底弄懂的东西…"
+                : intent === "build"
+                  ? "描述你想亲手做出来的东西…"
+                  : "描述你想拆开理解的东西…"
             }
             rows={1}
             maxLength={500}
-            aria-label="描述想要拆解的对象"
+            aria-label={
+              intent === "build"
+                ? "描述想要打造的对象"
+                : "描述想要拆解的对象"
+            }
             aria-describedby={hint ? "composer-status" : undefined}
           />
 
@@ -353,8 +398,12 @@ export function HomePage() {
               className="composer-submit"
               type="submit"
               disabled={!canSubmit || submitting}
-              aria-label="确认并生成关系图"
-              title="生成关系图"
+              aria-label={
+                intent === "build"
+                  ? "确认并开始打造"
+                  : "确认并生成关系图"
+              }
+              title={intent === "build" ? "开始打造" : "生成关系图"}
             >
               {submitting ? (
                 <LoaderCircle className="is-spinning" size={18} />

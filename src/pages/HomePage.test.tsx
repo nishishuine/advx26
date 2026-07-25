@@ -15,11 +15,12 @@ import { HomePage } from "./HomePage";
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
 
-function ResultPage() {
+function ResultPage({ destination }: { destination: "explore" | "rebuild" }) {
   const { caseId } = useParams();
   const [searchParams] = useSearchParams();
   return (
     <div>
+      <span>destination:{destination};</span>
       case:{caseId};from:{searchParams.get("from")}
     </div>
   );
@@ -30,7 +31,14 @@ function renderHome() {
     <MemoryRouter initialEntries={["/"]}>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/explore/:caseId" element={<ResultPage />} />
+        <Route
+          path="/explore/:caseId"
+          element={<ResultPage destination="explore" />}
+        />
+        <Route
+          path="/rebuild/:caseId"
+          element={<ResultPage destination="rebuild" />}
+        />
       </Routes>
     </MemoryRouter>,
   );
@@ -59,11 +67,17 @@ describe("HomePage conversation entry", () => {
     expect(
       screen.getByRole("button", { name: "确认并生成关系图" }),
     ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /拆开/ }).getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", { name: /打造/ }).getAttribute("aria-pressed"),
+    ).toBe("false");
     expect(screen.queryByText("LOCAL MVP")).toBeNull();
     expect(screen.queryByText(/静态关系数据/)).toBeNull();
   });
 
-  it("提交普通对象后进入物体关系图", () => {
+  it("默认选择拆开，提交后进入物体关系图", () => {
     renderHome();
     const input = screen.getByLabelText("描述想要拆解的对象");
     const submit = screen.getByRole("button", {
@@ -78,6 +92,31 @@ describe("HomePage conversation entry", () => {
     fireEvent.click(submit);
 
     act(() => vi.advanceTimersByTime(600));
+    expect(screen.getByText("destination:explore;")).toBeTruthy();
+    expect(
+      screen.getByText("case:orange-pi-first-boot;from:conversation"),
+    ).toBeTruthy();
+  });
+
+  it("选择打造后进入从零到一教程", () => {
+    renderHome();
+    const buildMode = screen.getByRole("button", { name: /打造/ });
+
+    fireEvent.click(buildMode);
+    expect(buildMode.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      screen.getByRole("button", { name: /拆开/ }).getAttribute("aria-pressed"),
+    ).toBe("false");
+
+    fireEvent.change(screen.getByLabelText("描述想要打造的对象"), {
+      target: { value: "从零打造一台可以发布网页的 Orange Pi 3B" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "确认并开始打造" }),
+    );
+
+    act(() => vi.advanceTimersByTime(600));
+    expect(screen.getByText("destination:rebuild;")).toBeTruthy();
     expect(
       screen.getByText("case:orange-pi-first-boot;from:conversation"),
     ).toBeTruthy();

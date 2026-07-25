@@ -1,532 +1,556 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Blocks,
-  Box,
-  Cable,
   Check,
-  CheckCircle2,
   ChevronRight,
-  CircleDollarSign,
+  Circle,
+  CircleAlert,
   Clock3,
-  Code2,
-  ExternalLink,
-  Gauge,
-  Lightbulb,
-  ListChecks,
-  PackageCheck,
+  Copy,
   ShieldCheck,
-  Sparkles,
-  TimerReset,
   Wrench,
-  XCircle,
-  Zap,
 } from "lucide-react";
-import { Brand } from "../components/Brand";
 import { PageLoader } from "../components/PageLoader";
 import { graphRepository } from "../domain/repository";
-import type {
-  BuildGuide,
-  BuildStep,
-  WorldCase,
-} from "../domain/types";
+import type { BuildGuide, BuildStep, WorldCase } from "../domain/types";
+
+type DeviceInfo = {
+  ip: string;
+  username: string;
+};
 
 export function RebuildPage() {
   const { caseId = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [guide, setGuide] = useState<BuildGuide | null | undefined>(undefined);
   const [worldCase, setWorldCase] = useState<WorldCase | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo>({
+    ip: "",
+    username: "",
+  });
+  const [progressLoaded, setProgressLoaded] = useState(false);
 
   useEffect(() => {
+    let alive = true;
     Promise.all([
       graphRepository.getCase(caseId),
       graphRepository.getBuildGuide(caseId),
     ])
       .then(([loadedCase, loadedGuide]) => {
+        if (!alive) return;
         setWorldCase(loadedCase);
         setGuide(loadedGuide);
       })
       .catch(() => {
-        setGuide(null);
+        if (alive) setGuide(null);
       });
+
+    return () => {
+      alive = false;
+    };
   }, [caseId]);
 
-  const completedCriteria = useMemo(
-    () => Object.values(checked).filter(Boolean).length,
-    [checked],
-  );
-  const totalCriteria =
-    guide?.steps.reduce(
-      (total, step) => total + step.successCriteria.length,
-      0,
-    ) ?? 0;
+  useEffect(() => {
+    setProgressLoaded(false);
+    try {
+      const saved = window.localStorage.getItem(`8bit-runbook:v2:${caseId}`);
+      const parsed = saved ? JSON.parse(saved) : {};
+      setChecked(
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? parsed
+          : {},
+      );
+    } catch {
+      setChecked({});
+    }
+    setProgressLoaded(true);
+  }, [caseId]);
 
-  const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+  useEffect(() => {
+    if (!progressLoaded) return;
+    try {
+      window.localStorage.setItem(
+        `8bit-runbook:v2:${caseId}`,
+        JSON.stringify(checked),
+      );
+    } catch {
+      // The tutorial still works when private browsing blocks local storage.
+    }
+  }, [caseId, checked, progressLoaded]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(`8bit-device:${caseId}`);
+      const parsed = saved ? JSON.parse(saved) : null;
+      setDeviceInfo({
+        ip: typeof parsed?.ip === "string" ? parsed.ip : "",
+        username:
+          typeof parsed?.username === "string" ? parsed.username : "",
+      });
+    } catch {
+      setDeviceInfo({ ip: "", username: "" });
+    }
+  }, [caseId]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        `8bit-device:${caseId}`,
+        JSON.stringify(deviceInfo),
+      );
+    } catch {
+      // Device values can remain in memory when storage is unavailable.
+    }
+  }, [caseId, deviceInfo]);
+
+  const requestedStep = Number(searchParams.get("step") ?? "1");
+  const stepIndex = guide
+    ? Math.min(
+        guide.steps.length - 1,
+        Math.max(
+          0,
+          Number.isFinite(requestedStep)
+            ? Math.trunc(requestedStep) - 1
+            : 0,
+        ),
+      )
+    : 0;
+  const step = guide?.steps[stepIndex];
+
+  const completedSteps = useMemo(() => {
+    if (!guide) return 0;
+    return guide.steps.filter((candidate) =>
+      candidate.successCriteria.every(
+        (_, criterionIndex) =>
+          checked[criterionKey(candidate, criterionIndex)],
+      ),
+    ).length;
+  }, [checked, guide]);
+
+  const goToStep = (nextIndex: number) => {
+    if (!guide) return;
+    const bounded = Math.min(
+      guide.steps.length - 1,
+      Math.max(0, nextIndex),
+    );
+    const next = new URLSearchParams(searchParams);
+    next.set("step", String(bounded + 1));
+    setSearchParams(next);
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      // JSDOM and a few embedded browsers do not implement scrollTo.
+    }
   };
 
   if (guide === undefined) {
-    return <PageLoader label="正在展开重建路径…" />;
+    return <PageLoader label="正在准备可执行教程…" />;
   }
 
-  if (!guide || !worldCase) {
+  if (!guide || !worldCase || !step) {
     return (
-      <div className="error-page">
-        <Wrench size={34} />
-        <h1>这个案例暂不提供重建</h1>
-        <p>生命案例只提供教学观察与结构探索，不生成真实生命制作方案。</p>
-        <button
-          className="button button--dark"
-          onClick={() => navigate(`/explore/${caseId}?view=structure`)}
-        >
-          返回关系图
+      <main className="runbook-error">
+        <Wrench size={30} />
+        <h1>这个对象还没有可跑通的打造教程</h1>
+        <p>当前 Demo 只开放已经逐步验证过的项目。</p>
+        <button type="button" onClick={() => navigate("/")}>
+          返回重新选择
         </button>
-      </div>
+      </main>
     );
   }
 
+  const stepComplete = step.successCriteria.every(
+    (_, criterionIndex) => checked[criterionKey(step, criterionIndex)],
+  );
+  const serializedStep = JSON.stringify(step);
+  const needsIp = serializedStep.includes("{{IP}}");
+  const needsUsername = serializedStep.includes("{{USER}}");
+
   return (
-    <main
-      className="rebuild-page"
-      style={
-        {
-          "--case-accent": worldCase.accent,
-          "--case-soft": worldCase.accentSoft,
-        } as React.CSSProperties
-      }
-    >
-      <header className="rebuild-header">
-        <Brand compact />
-        <nav>
-          <button type="button" onClick={() => navigate("/")}>
-            首页
-          </button>
+    <main className="runbook-page">
+      <header className="runbook-header">
+        <Link className="runbook-wordmark" to="/">
+          8bit
+        </Link>
+        <div>
+          <span>打造</span>
           <ChevronRight size={13} />
-          <button
-            type="button"
-            onClick={() =>
-              navigate(
-                `/explore/${worldCase.id}/${worldCase.rootNodeId}?view=structure`,
-              )
-            }
-          >
-            {worldCase.shortTitle}
-          </button>
-          <ChevronRight size={13} />
-          <span>重建路径</span>
-        </nav>
-        <button
-          className="button button--ghost"
-          type="button"
-          onClick={() =>
-            navigate(
-              `/explore/${worldCase.id}/${worldCase.rootNodeId}?view=signal`,
-            )
-          }
+          <strong>{worldCase.shortTitle}</strong>
+        </div>
+        <Link
+          className="runbook-back"
+          to={`/explore/${worldCase.id}/${worldCase.rootNodeId}?view=structure&goal=learn`}
         >
-          <ArrowLeft size={15} />
-          返回关系图
-        </button>
+          <ArrowLeft size={14} />
+          拆开看关系
+        </Link>
       </header>
 
-      <section className="rebuild-hero">
-        <div className="container rebuild-hero__grid">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <span className="hero-kicker">
-              <Wrench size={14} />
-              REBUILD / 分阶段安全执行
-            </span>
+      <div className="runbook-layout">
+        <aside className="runbook-sidebar">
+          <div className="runbook-sidebar__intro">
+            <span>从零到一</span>
             <h1>{guide.title}</h1>
-            <p>{guide.summary}</p>
-            <div className="rebuild-hero__actions">
-              <button
-                className="button button--dark"
-                type="button"
-                onClick={() => scrollTo("steps")}
-              >
-                开始第 1 阶段
-                <ArrowRight size={16} />
-              </button>
-              <button
-                className="text-button"
-                type="button"
-                onClick={() => scrollTo("parts")}
-              >
-                先检查零件
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </motion.div>
-
-          <div className="build-metrics">
-            <article>
-              <Gauge size={18} />
-              <span>难度</span>
-              <strong>{guide.difficulty}</strong>
-            </article>
-            <article>
-              <Clock3 size={18} />
-              <span>预计耗时</span>
-              <strong>{guide.totalTime}</strong>
-            </article>
-            <article>
-              <CircleDollarSign size={18} />
-              <span>材料预算</span>
-              <strong>{guide.budget}</strong>
-            </article>
-            <article>
-              <ShieldCheck size={18} />
-              <span>安全边界</span>
-              <strong>5V 低压</strong>
-            </article>
+            <p>{guide.totalTime}</p>
           </div>
-        </div>
 
-        <div className="container system-chain">
-          <span className="system-chain__label">最小可用链路</span>
-          <div className="system-chain__flow">
-            {guide.programFlow.map((item, index) => (
-              <div key={`${item}-${index}`}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{item}</strong>
-                {index < guide.programFlow.length - 1 && (
-                  <ArrowRight size={16} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="container build-layout">
-        <aside className="build-nav">
-          <span className="eyebrow">重建地图</span>
-          <nav>
-            <button type="button" onClick={() => scrollTo("parts")}>
-              <PackageCheck size={16} />
-              零件清单
-              <span>{guide.parts.length}</span>
-            </button>
-            <button type="button" onClick={() => scrollTo("connections")}>
-              <Cable size={16} />
-              连接关系
-              <span>{guide.connections.length}</span>
-            </button>
-            <button type="button" onClick={() => scrollTo("steps")}>
-              <ListChecks size={16} />
-              制作阶段
-              <span>{guide.steps.length}</span>
-            </button>
-            <button type="button" onClick={() => scrollTo("safety")}>
-              <ShieldCheck size={16} />
-              安全提示
-              <span>{guide.safety.length}</span>
-            </button>
-          </nav>
-          <div className="build-progress">
+          <div className="runbook-progress">
             <div>
-              <span>验收进度</span>
+              <span>已完成</span>
               <strong>
-                {completedCriteria}/{totalCriteria}
+                {completedSteps}/{guide.steps.length}
               </strong>
             </div>
-            <div className="build-progress__bar">
-              <i
+            <i>
+              <span
                 style={{
-                  width:
-                    totalCriteria > 0
-                      ? `${(completedCriteria / totalCriteria) * 100}%`
-                      : "0%",
+                  width: `${(completedSteps / guide.steps.length) * 100}%`,
                 }}
               />
-            </div>
-            <small>勾选每一步的完成标准，进度只保存在当前页面。</small>
+            </i>
+          </div>
+
+          <nav className="runbook-step-nav" aria-label="打造步骤">
+            {guide.steps.map((candidate, index) => {
+              const complete = candidate.successCriteria.every(
+                (_, criterionIndex) =>
+                  checked[criterionKey(candidate, criterionIndex)],
+              );
+              return (
+                <button
+                  type="button"
+                  className={`${index === stepIndex ? "is-current" : ""} ${complete ? "is-complete" : ""}`}
+                  onClick={() => goToStep(index)}
+                  key={candidate.id}
+                >
+                  <span>
+                    {complete ? (
+                      <Check size={13} />
+                    ) : (
+                      String(index + 1).padStart(2, "0")
+                    )}
+                  </span>
+                  <strong>{candidate.title}</strong>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="runbook-sidebar__safety">
+            <ShieldCheck size={15} />
+            不确定磁盘、电源或接线时先停下，不猜、不盲试。
           </div>
         </aside>
 
-        <div className="build-content">
-          <section className="build-section" id="parts">
-            <div className="build-section__head">
-              <div>
-                <span className="eyebrow">01 / 准备</span>
-                <h2>先认识每个零件的任务。</h2>
+        <section className="runbook-content">
+          <article className="runbook-step">
+            <header className="runbook-step__header">
+              <div className="runbook-step__meta">
+                <span>
+                  第 {stepIndex + 1} / {guide.steps.length} 步
+                </span>
+                <span>
+                  <Clock3 size={13} />
+                  {step.duration}
+                </span>
               </div>
-              <div className="tools-popover">
-                <Wrench size={15} />
-                工具：{guide.tools.join(" · ")}
-              </div>
-            </div>
+              <h2>{step.title}</h2>
+              <p>{step.purpose}</p>
+            </header>
 
-            <div className="parts-grid">
-              {guide.parts.map((part, index) => (
-                <article className="part-card" key={part.id}>
-                  <div className="part-card__top">
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <span
-                      className={`part-card__type part-card__type--${part.status}`}
-                    >
-                      {part.status === "core" ? "核心" : "辅助"}
-                    </span>
-                  </div>
-                  <div className="part-card__icon">
-                    {part.status === "core" ? (
-                      <Zap size={19} />
-                    ) : (
-                      <Box size={19} />
-                    )}
-                  </div>
-                  <h3>{part.name}</h3>
-                  <p>{part.purpose}</p>
-                  <footer>
-                    <span>{part.quantity}</span>
-                    <strong>{part.estimate}</strong>
-                  </footer>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="build-section" id="connections">
-            <div className="build-section__head">
-              <div>
-                <span className="eyebrow">02 / 连接</span>
-                <h2>知道接哪里，也知道为什么。</h2>
+            {step.id === "flash-card" && (
+              <div className="runbook-stop-rule">
+                <CircleAlert size={17} />
+                <span>
+                  这里只允许清空已确认容量的 TF 卡。目标设备有一点不确定，就停止写入。
+                </span>
               </div>
-            </div>
+            )}
 
-            <div className="connection-board">
-              {guide.connections.map((connection, index) => (
-                <article className="connection-row" key={`${connection.from}-${index}`}>
-                  <span className="connection-row__number">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <strong>{connection.from}</strong>
-                  <div className="connection-row__line">
-                    <span>{connection.via}</span>
-                    <i />
-                    <ArrowRight size={15} />
-                  </div>
-                  <strong>{connection.to}</strong>
-                  <p>{connection.reason}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="program-card">
-              <div className="program-card__icon">
-                <Code2 size={22} />
-              </div>
-              <div>
-                <span className="eyebrow">系统路径 / FLOW</span>
-                <h3>把首次启动拆成可以逐项验收的阶段。</h3>
-              </div>
-              <div className="program-flow">
-                {guide.programFlow.map((item, index) => (
-                  <span key={item}>
-                    {item}
-                    {index < guide.programFlow.length - 1 && (
-                      <ChevronRight size={13} />
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="build-section" id="steps">
-            <div className="build-section__head">
-              <div>
-                <span className="eyebrow">03 / 制作与验证</span>
-                <h2>一次只完成一个最小模块。</h2>
-              </div>
-              <p>每步都有前置条件、验收标准和失败后的第一检查点。</p>
-            </div>
-
-            <div className="step-list">
-              {guide.steps.map((step, index) => (
-                <BuildStepCard
-                  step={step}
-                  index={index}
-                  checked={checked}
-                  onToggle={(criterionId) =>
-                    setChecked((current) => ({
-                      ...current,
-                      [criterionId]: !current[criterionId],
-                    }))
-                  }
-                  key={step.id}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="safety-section" id="safety">
-            <div className="safety-section__title">
-              <span>
-                <ShieldCheck size={22} />
-              </span>
-              <div>
-                <span className="eyebrow">04 / 安全边界</span>
-                <h2>先保护人和设备，再验证功能。</h2>
-              </div>
-            </div>
-            <div className="safety-list">
-              {guide.safety.map((item, index) => (
-                <div key={item}>
-                  <CheckCircle2 size={16} />
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <p>{item}</p>
+            {(needsIp || needsUsername) && (
+              <section
+                className="runbook-device"
+                aria-label="本次设备信息"
+              >
+                <div>
+                  <strong>本次设备</strong>
+                  <span>填一次，后面的命令会自动带入。</span>
                 </div>
-              ))}
-            </div>
-          </section>
+                {needsIp && (
+                  <label>
+                    <span>Orange Pi IP</span>
+                    <input
+                      value={deviceInfo.ip}
+                      onChange={(event) =>
+                        setDeviceInfo((current) => ({
+                          ...current,
+                          ip: event.target.value.trim(),
+                        }))
+                      }
+                      placeholder="例如 192.168.1.123"
+                      spellCheck={false}
+                    />
+                  </label>
+                )}
+                {needsUsername && (
+                  <label>
+                    <span>你的普通用户名</span>
+                    <input
+                      value={deviceInfo.username}
+                      onChange={(event) =>
+                        setDeviceInfo((current) => ({
+                          ...current,
+                          username: event.target.value
+                            .trim()
+                            .toLowerCase(),
+                        }))
+                      }
+                      placeholder="例如 jie"
+                      spellCheck={false}
+                    />
+                  </label>
+                )}
+              </section>
+            )}
 
-          <section className="build-complete">
-            <Sparkles size={22} />
-            <div>
-              <span className="eyebrow">这不是终点</span>
-              <h2>回到关系图，看看你刚刚重建了什么。</h2>
-              <p>
-                这些步骤对应着文件、写盘、启动、网络、SSH 与服务之间的关系。完成验收后，再回到信号视图会更容易理解整条链路。
-              </p>
-            </div>
-            <button
-              className="button button--dark"
-              type="button"
-              onClick={() =>
-                navigate(
-                  `/explore/${worldCase.id}/${worldCase.rootNodeId}?view=signal`,
-                )
-              }
-            >
-              回看信号关系
-              <ExternalLink size={15} />
-            </button>
-          </section>
-        </div>
-      </div>
-    </main>
-  );
-}
+            <section className="runbook-section">
+              <div className="runbook-section__title">
+                <span>01</span>
+                <div>
+                  <h3>开始前确认</h3>
+                  <p>这些条件不满足，就先不要继续。</p>
+                </div>
+              </div>
+              <ul className="runbook-prerequisites">
+                {step.prerequisites.map((item) => (
+                  <li key={item}>
+                    <Circle size={9} />
+                    <InstructionText text={item} values={deviceInfo} />
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-function BuildStepCard({
-  step,
-  index,
-  checked,
-  onToggle,
-}: {
-  step: BuildStep;
-  index: number;
-  checked: Record<string, boolean>;
-  onToggle: (criterionId: string) => void;
-}) {
-  const [open, setOpen] = useState(index === 0);
-  const criterionIds = step.successCriteria.map(
-    (_, criterionIndex) => `${step.id}-${criterionIndex}`,
-  );
-  const complete = criterionIds.every((id) => checked[id]);
-
-  return (
-    <article className={`build-step ${open ? "is-open" : ""}`}>
-      <button
-        className="build-step__header"
-        type="button"
-        onClick={() => setOpen(!open)}
-      >
-        <span className={`build-step__number ${complete ? "is-complete" : ""}`}>
-          {complete ? <Check size={17} /> : String(index + 1).padStart(2, "0")}
-        </span>
-        <span>
-          <small>
-            {step.phase} · {step.duration}
-          </small>
-          <strong>{step.title}</strong>
-        </span>
-        <p>{step.purpose}</p>
-        <ChevronRight size={18} />
-      </button>
-
-      {open && (
-        <motion.div
-          className="build-step__body"
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-        >
-          <div className="step-prerequisites">
-            <span>
-              <TimerReset size={14} />
-              开始前确认
-            </span>
-            <p>{step.prerequisites.join("；")}</p>
-          </div>
-
-          <div className="step-columns">
-            <section>
-              <h4>
-                <Blocks size={15} />
-                操作
-              </h4>
-              <ol>
-                {step.instructions.map((instruction) => (
-                  <li key={instruction}>{instruction}</li>
+            <section className="runbook-section">
+              <div className="runbook-section__title">
+                <span>02</span>
+                <div>
+                  <h3>照着做</h3>
+                  <p>一次只完成一条，看到对应结果再继续。</p>
+                </div>
+              </div>
+              <ol className="runbook-actions">
+                {step.instructions.map((instruction, index) => (
+                  <li key={instruction}>
+                    <span>{index + 1}</span>
+                    <p>
+                      <InstructionText
+                        text={instruction}
+                        copyable
+                        values={deviceInfo}
+                      />
+                    </p>
+                  </li>
                 ))}
               </ol>
             </section>
 
-            <section>
-              <h4>
-                <CheckCircle2 size={15} />
-                完成标准
-              </h4>
-              <div className="criteria-list">
+            <section className="runbook-section">
+              <div className="runbook-section__title">
+                <span>03</span>
+                <div>
+                  <h3>做到这些才算完成</h3>
+                  <p>逐项勾选，进度会保存在这台电脑上。</p>
+                </div>
+              </div>
+              <div className="runbook-criteria">
                 {step.successCriteria.map((criterion, criterionIndex) => {
-                  const criterionId = `${step.id}-${criterionIndex}`;
+                  const key = criterionKey(step, criterionIndex);
                   return (
                     <label key={criterion}>
                       <input
                         type="checkbox"
-                        checked={Boolean(checked[criterionId])}
-                        onChange={() => onToggle(criterionId)}
+                        checked={Boolean(checked[key])}
+                        onChange={() =>
+                          setChecked((current) => ({
+                            ...current,
+                            [key]: !current[key],
+                          }))
+                        }
                       />
                       <span>
-                        <Check size={12} />
+                        <Check size={13} />
                       </span>
-                      {criterion}
+                      <InstructionText
+                        text={criterion}
+                        values={deviceInfo}
+                      />
                     </label>
                   );
                 })}
               </div>
             </section>
 
-            <section className="troubleshooting">
-              <h4>
-                <AlertTriangle size={15} />
-                出错先查
-              </h4>
+            <details className="runbook-troubleshooting">
+              <summary>
+                <CircleAlert size={16} />
+                卡住了，先检查这里
+                <ChevronRight size={15} />
+              </summary>
               <ul>
                 {step.troubleshooting.map((item) => (
                   <li key={item}>
-                    <XCircle size={13} />
-                    {item}
+                    <InstructionText
+                      text={item}
+                      copyable
+                      values={deviceInfo}
+                    />
                   </li>
                 ))}
               </ul>
-            </section>
-          </div>
-        </motion.div>
-      )}
-    </article>
+            </details>
+
+            <footer className="runbook-navigation">
+              <button
+                type="button"
+                className="runbook-navigation__secondary"
+                onClick={() => goToStep(stepIndex - 1)}
+                disabled={stepIndex === 0}
+              >
+                <ArrowLeft size={15} />
+                上一步
+              </button>
+              {stepIndex < guide.steps.length - 1 ? (
+                <button
+                  type="button"
+                  className="runbook-navigation__primary"
+                  onClick={() => goToStep(stepIndex + 1)}
+                >
+                  {stepComplete ? "这一步已完成，继续" : "下一步"}
+                  <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="runbook-navigation__primary"
+                  onClick={() =>
+                    navigate(
+                      `/explore/${worldCase.id}/${worldCase.rootNodeId}?view=structure&goal=learn`,
+                    )
+                  }
+                >
+                  完成，回看整体关系
+                  <ArrowRight size={16} />
+                </button>
+              )}
+            </footer>
+          </article>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function criterionKey(step: BuildStep, criterionIndex: number) {
+  return `${step.id}:${criterionIndex}`;
+}
+
+function InstructionText({
+  text,
+  copyable = false,
+  values,
+}: {
+  text: string;
+  copyable?: boolean;
+  values: DeviceInfo;
+}) {
+  const hasUnresolvedIp = text.includes("{{IP}}") && !values.ip;
+  const hasUnresolvedUsername =
+    text.includes("{{USER}}") && !values.username;
+  const resolvedText = text
+    .replaceAll("{{IP}}", values.ip || "IP待填写")
+    .replaceAll("{{USER}}", values.username || "用户名待填写");
+  const pieces = resolvedText
+    .split(/(`[^`]+`|https?:\/\/[^\s，。]+)/g)
+    .filter(Boolean);
+  return (
+    <>
+      {pieces.map((piece, index) => {
+        if (/^https?:\/\//.test(piece)) {
+          if (hasUnresolvedIp) {
+            return (
+              <span
+                className="runbook-unresolved"
+                key={`${piece}-${index}`}
+              >
+                {piece}
+              </span>
+            );
+          }
+          return (
+            <a
+              className="runbook-inline-link"
+              href={piece}
+              target="_blank"
+              rel="noreferrer"
+              key={`${piece}-${index}`}
+            >
+              打开链接 ↗
+            </a>
+          );
+        }
+        if (!piece.startsWith("`") || !piece.endsWith("`")) {
+          return <span key={`${piece}-${index}`}>{piece}</span>;
+        }
+        const command = piece.slice(1, -1);
+        return copyable ? (
+          <CopyCommand
+            command={command}
+            disabled={hasUnresolvedIp || hasUnresolvedUsername}
+            key={`${command}-${index}`}
+          />
+        ) : (
+          <code key={`${command}-${index}`}>{command}</code>
+        );
+      })}
+    </>
+  );
+}
+
+function CopyCommand({
+  command,
+  disabled = false,
+}: {
+  command: string;
+  disabled?: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className="runbook-command"
+      onClick={copy}
+      title={disabled ? "先填写上方设备信息" : "复制命令"}
+      disabled={disabled}
+    >
+      <code>{command}</code>
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+    </button>
   );
 }

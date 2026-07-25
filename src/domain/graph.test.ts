@@ -105,6 +105,40 @@ describe("validateWorldCase", () => {
 
     expect(() => validateWorldCase(worldCase)).toThrow("缺少解释");
   });
+
+  it("流程层不允许只给部分同级节点设置坐标", () => {
+    const worldCase = createCase();
+    worldCase.layout = { mode: "workflow" };
+    worldCase.nodes.find((node) => node.id === "child-a")!.flowPosition = {
+      column: 0,
+      lane: 0,
+    };
+
+    expect(() => validateWorldCase(worldCase)).toThrow(
+      "不能只设置一部分",
+    );
+  });
+
+  it("拒绝无效或重复的流程坐标", () => {
+    const invalid = createCase();
+    invalid.layout = { mode: "workflow" };
+    invalid.nodes.find((node) => node.id === "child-a")!.flowPosition = {
+      column: Number.NaN,
+      lane: 0,
+    };
+
+    expect(() => validateWorldCase(invalid)).toThrow("流程坐标无效");
+
+    const duplicate = createCase();
+    duplicate.layout = { mode: "workflow" };
+    duplicate.nodes
+      .filter((node) => node.parentId === "root")
+      .forEach((node) => {
+        node.flowPosition = { column: 1, lane: 1 };
+      });
+
+    expect(() => validateWorldCase(duplicate)).toThrow("存在重复坐标");
+  });
 });
 
 describe("getCollapsedEdgesForLayer", () => {

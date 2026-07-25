@@ -26,13 +26,18 @@ import {
 } from "../components/ExplorerFlowNode";
 import { NodeInspector } from "../components/NodeInspector";
 import { PageLoader } from "../components/PageLoader";
+import { SimpleEdgeInspector } from "../components/SimpleEdgeInspector";
+import { SimpleNodeInspector } from "../components/SimpleNodeInspector";
 import {
-  getCollapsedEdgesForLayer,
   getBreadcrumbs,
   getChildren,
+  getCollapsedEdgesForLayer,
   getNode,
 } from "../domain/graph";
-import { createNetworkLayout } from "../domain/networkLayout";
+import {
+  createCaseLayout,
+  resolveLayoutMode,
+} from "../domain/networkLayout";
 import {
   RELATION_LABELS,
   VIEW_LABELS,
@@ -64,10 +69,8 @@ function layoutNodes(
   selectedNodeId: string | null,
   selectedEdge: { source: string; target: string } | null,
 ): ExplorerNode[] {
-  const positions = createNetworkLayout(
-    children.map((node) => node.id),
-    edges,
-  );
+  const layoutMode = resolveLayoutMode(worldCase.layout);
+  const positions = createCaseLayout(layoutMode, children, edges);
 
   return children.map((graphNode) => {
     const point = positions.get(graphNode.id) ?? { x: 520, y: 305 };
@@ -80,6 +83,7 @@ function layoutNodes(
       data: {
         graphNode,
         accent: worldCase.accent,
+        layoutMode,
         linked:
           selectedEdge?.source === graphNode.id ||
           selectedEdge?.target === graphNode.id,
@@ -98,14 +102,19 @@ export function ExplorerPage() {
   const [error, setError] = useState("");
 
   const rawView = searchParams.get("view") as ViewType | null;
+  const isSimpleExplore = worldCase?.id === "orange-pi-first-boot";
   const view: ViewType =
-    rawView && worldCase
+    isSimpleExplore
+      ? "structure"
+      : rawView && worldCase
       ? getViewsForDomain(worldCase.domain).includes(rawView)
         ? rawView
         : "structure"
       : rawView ?? "structure";
   const selectedNodeId = searchParams.get("selected");
   const selectedEdgeId = searchParams.get("edge");
+  const layoutMode = resolveLayoutMode(worldCase?.layout);
+  const isWorkflow = layoutMode === "workflow";
 
   useEffect(() => {
     let alive = true;
@@ -173,6 +182,21 @@ export function ExplorerPage() {
     [currentNode, view, worldCase],
   );
 
+  const layoutEdges = useMemo(() => {
+    if (!worldCase || !currentNode || !isWorkflow) return layerEdges;
+
+    const stableEdges = new Map<string, GraphEdge>();
+    getViewsForDomain(worldCase.domain).forEach((layoutView) => {
+      getCollapsedEdgesForLayer(worldCase, currentNode.id, layoutView).forEach(
+        (edge) => {
+          const key = `${edge.source}:${edge.target}`;
+          if (!stableEdges.has(key)) stableEdges.set(key, edge);
+        },
+      );
+    });
+    return Array.from(stableEdges.values());
+  }, [currentNode, isWorkflow, layerEdges, worldCase]);
+
   const displayEdges = useMemo(() => {
     const groups = new Map<string, GraphEdge[]>();
     layerEdges.forEach((edge) => {
@@ -204,7 +228,7 @@ export function ExplorerPage() {
         ? layoutNodes(
             worldCase,
             children,
-            layerEdges,
+            layoutEdges,
             visibleSelectedNodeId,
             selectedDisplayEdge,
           )
@@ -212,7 +236,7 @@ export function ExplorerPage() {
     [
       currentNode,
       children,
-      layerEdges,
+      layoutEdges,
       selectedDisplayEdge,
       visibleSelectedNodeId,
       worldCase,
@@ -223,28 +247,37 @@ export function ExplorerPage() {
     () =>
       displayEdges.map((edge) => {
         const isSelected = edge.id === selectedDisplayEdge?.id;
+        const isSupportingPath =
+          isWorkflow &&
+          edge.members.length > 0 &&
+          edge.members.every((member) => member.flowStyle === "support");
         return {
           id: edge.id,
           source: edge.source,
           target: edge.target,
-          label: isSelected ? edge.displayLabel : undefined,
-          type: "straight",
+          label: isSelected
+            ? isSimpleExplore
+              ? "如何接上"
+              : edge.displayLabel
+            : undefined,
+          type: isWorkflow ? "smoothstep" : "straight",
           selected: isSelected,
           data: { graphEdges: edge.members },
           animated: false,
           interactionWidth: 24,
-          markerEnd: isSelected
+          markerEnd: isWorkflow || isSelected
             ? {
                 type: MarkerType.ArrowClosed,
-                color: "#0071e3",
-                width: 9,
-                height: 9,
+                color: isSelected ? "#0071e3" : "#8e8e93",
+                width: isSelected ? 9 : 8,
+                height: isSelected ? 9 : 8,
               }
             : undefined,
           style: {
             stroke: isSelected ? "#0071e3" : "#a8a8ad",
             strokeWidth: isSelected ? 1.8 : 0.9,
-            opacity: isSelected ? 1 : 0.58,
+            opacity: isSelected ? 1 : isWorkflow ? 0.72 : 0.58,
+            strokeDasharray: isSupportingPath ? "5 5" : undefined,
           },
           labelStyle: {
             fill: "#1d1d1f",
@@ -259,7 +292,7 @@ export function ExplorerPage() {
           labelBgBorderRadius: 6,
         };
       }),
-    [displayEdges, selectedDisplayEdge, view],
+    [displayEdges, isSimpleExplore, isWorkflow, selectedDisplayEdge, view],
   );
 
   const selectedNode = useMemo(() => {
@@ -337,10 +370,14 @@ export function ExplorerPage() {
     return <PageLoader />;
   }
 
-  const availableViews = getViewsForDomain(worldCase.domain);
+  const availableViews = isSimpleExplore
+    ? (["structure"] as ViewType[])
+    : getViewsForDomain(worldCase.domain);
 
   return (
-    <main className="explorer-page">
+    <main
+      className={`explorer-page ${isSimpleExplore ? "explorer-page--simple" : ""}`}
+    >
       <header className="explorer-header">
         <Link className="explorer-wordmark" to="/">
           8bit
@@ -388,26 +425,33 @@ export function ExplorerPage() {
           ))}
         </nav>
 
-        <div className="view-switcher" role="group" aria-label="关系视图">
-          {availableViews.map((viewId) => (
-            <button
-              type="button"
-              className={view === viewId ? "is-active" : ""}
-              style={
-                view === viewId
-                  ? ({
-                      "--view-color": VIEW_COLORS[viewId],
-                    } as React.CSSProperties)
-                  : undefined
-              }
-              onClick={() => setView(viewId)}
-              key={viewId}
-            >
-              {VIEW_LABELS[viewId]}
-              {view === viewId && <span>{layerEdges.length}</span>}
-            </button>
-          ))}
-        </div>
+        {isSimpleExplore ? (
+          <div className="explore-mode-label">
+            <span />
+            拆开 · 主要部分与关系
+          </div>
+        ) : (
+          <div className="view-switcher" role="group" aria-label="关系视图">
+            {availableViews.map((viewId) => (
+              <button
+                type="button"
+                className={view === viewId ? "is-active" : ""}
+                style={
+                  view === viewId
+                    ? ({
+                        "--view-color": VIEW_COLORS[viewId],
+                      } as React.CSSProperties)
+                    : undefined
+                }
+                onClick={() => setView(viewId)}
+                key={viewId}
+              >
+                {VIEW_LABELS[viewId]}
+                {view === viewId && <span>{layerEdges.length}</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="explorer-workspace">
@@ -415,11 +459,26 @@ export function ExplorerPage() {
           <div className="graph-canvas">
             <div className="graph-context">
               <span className="eyebrow">
-                L{currentNode.level + 1} · {children.length} 个节点
+                {isSimpleExplore
+                  ? currentNode.id === worldCase.rootNodeId
+                    ? "主要部分"
+                    : "继续拆开"
+                  : `L${currentNode.level + 1} · ${children.length} 个节点`}
               </span>
               <h1>{currentNode.label}</h1>
               <p>{currentNode.summary}</p>
             </div>
+
+            {isWorkflow &&
+              children.length > 1 &&
+              (!isSimpleExplore ||
+                currentNode.id === worldCase.rootNodeId) && (
+              <div className="workflow-direction" aria-hidden="true">
+                <span>开始</span>
+                <i />
+                <span>接近完成</span>
+              </div>
+              )}
 
             {children.length > 0 ? (
               <ReactFlow<ExplorerNode, Edge>
@@ -434,7 +493,10 @@ export function ExplorerPage() {
                   if (node.data.graphNode.canExpand) exploreNode(node.id);
                 }}
                 fitView
-                fitViewOptions={{ padding: 0.24, maxZoom: 1.18 }}
+                fitViewOptions={{
+                  padding: isWorkflow ? 0.14 : 0.24,
+                  maxZoom: 1.18,
+                }}
                 minZoom={0.5}
                 maxZoom={1.5}
                 nodesDraggable={false}
@@ -463,7 +525,9 @@ export function ExplorerPage() {
               </div>
             )}
 
-            {view !== "structure" && layerEdges.length === 0 && (
+            {!isSimpleExplore &&
+              view !== "structure" &&
+              layerEdges.length === 0 && (
               <motion.div
                 className="no-relations-notice"
                 initial={{ opacity: 0, y: -8 }}
@@ -471,33 +535,64 @@ export function ExplorerPage() {
               >
                 当前层没有{VIEW_LABELS[view]}关系，节点仍保留以便比较。
               </motion.div>
-            )}
+              )}
           </div>
         </section>
 
         {selectedDisplayEdge ? (
-          <EdgeInspector
-            label={selectedDisplayEdge.displayLabel}
-            sourceId={selectedDisplayEdge.source}
-            targetId={selectedDisplayEdge.target}
-            edges={selectedDisplayEdge.members}
-            worldCase={worldCase}
-            onClose={closeInspector}
-          />
+          isSimpleExplore ? (
+            <SimpleEdgeInspector
+              label={selectedDisplayEdge.displayLabel}
+              sourceId={selectedDisplayEdge.source}
+              targetId={selectedDisplayEdge.target}
+              edges={selectedDisplayEdge.members}
+              worldCase={worldCase}
+              onClose={closeInspector}
+            />
+          ) : (
+            <EdgeInspector
+              label={selectedDisplayEdge.displayLabel}
+              sourceId={selectedDisplayEdge.source}
+              targetId={selectedDisplayEdge.target}
+              edges={selectedDisplayEdge.members}
+              worldCase={worldCase}
+              onClose={closeInspector}
+            />
+          )
         ) : selectedNode ? (
-          <NodeInspector
-            node={selectedNode}
-            worldCase={worldCase}
-            closeable={Boolean(visibleSelectedNodeId)}
-            onClose={closeInspector}
-            onExplore={() => exploreNode(selectedNode.id)}
-          />
+          isSimpleExplore ? (
+            <SimpleNodeInspector
+              node={selectedNode}
+              worldCase={worldCase}
+              closeable={Boolean(visibleSelectedNodeId)}
+              onClose={closeInspector}
+              onExplore={() => exploreNode(selectedNode.id)}
+            />
+          ) : (
+            <NodeInspector
+              node={selectedNode}
+              worldCase={worldCase}
+              closeable={Boolean(visibleSelectedNodeId)}
+              onClose={closeInspector}
+              onExplore={() => exploreNode(selectedNode.id)}
+            />
+          )
         ) : (
-          <aside className="node-inspector inspector-empty-state">
-            <span className="eyebrow">关系讲解</span>
-            <h2>选择节点或连接</h2>
+          <aside
+            className={
+              isSimpleExplore
+                ? "simple-inspector simple-inspector--empty"
+                : "node-inspector inspector-empty-state"
+            }
+          >
+            <span className={isSimpleExplore ? "simple-inspector__eyebrow" : "eyebrow"}>
+              关系讲解
+            </span>
+            <h2>点一个部分看看</h2>
             <p>
-              点击节点查看它的作用与上下游；点击两个节点之间的连线，拆开理解它们如何发生联系。
+              {isSimpleExplore
+                ? "点小圆点了解它负责什么；点连线了解前后两个部分如何接上。"
+                : "点击节点查看它的作用与上下游；点击两个节点之间的连线，拆开理解它们如何发生联系。"}
             </p>
           </aside>
         )}

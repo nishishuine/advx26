@@ -139,6 +139,15 @@ export function validateWorldCase(worldCase: WorldCase): WorldCase {
     if (node.domain !== worldCase.domain) {
       throw new GraphValidationError(`节点 ${node.id} 的领域与案例不一致`);
     }
+    if (
+      node.flowPosition &&
+      (!Number.isFinite(node.flowPosition.column) ||
+        !Number.isFinite(node.flowPosition.lane) ||
+        node.flowPosition.column < 0 ||
+        node.flowPosition.lane < 0)
+    ) {
+      throw new GraphValidationError(`节点 ${node.id} 的流程坐标无效`);
+    }
   }
 
   if (!ids.has(worldCase.rootNodeId)) {
@@ -155,6 +164,7 @@ export function validateWorldCase(worldCase: WorldCase): WorldCase {
   const nodeMap = new Map(worldCase.nodes.map((node) => [node.id, node]));
 
   const counts = new Map<string, number>();
+  const siblingGroups = new Map<string, GraphNode[]>();
   for (const node of worldCase.nodes) {
     if (!node.parentId) continue;
     if (!ids.has(node.parentId)) {
@@ -169,6 +179,10 @@ export function validateWorldCase(worldCase: WorldCase): WorldCase {
       );
     }
     counts.set(node.parentId, (counts.get(node.parentId) ?? 0) + 1);
+    siblingGroups.set(node.parentId, [
+      ...(siblingGroups.get(node.parentId) ?? []),
+      node,
+    ]);
   }
 
   for (const [parentId, count] of counts.entries()) {
@@ -177,6 +191,28 @@ export function validateWorldCase(worldCase: WorldCase): WorldCase {
         `节点 ${parentId} 的子节点数量为 ${count}，超过 ${MAX_CHILDREN_PER_LEVEL} 个上限`,
       );
     }
+  }
+
+  if (worldCase.layout?.mode === "workflow") {
+    siblingGroups.forEach((siblings, parentId) => {
+      const positioned = siblings.filter((node) => node.flowPosition);
+      if (positioned.length > 0 && positioned.length !== siblings.length) {
+        throw new GraphValidationError(
+          `流程层 ${parentId} 只能为全部节点设置坐标，不能只设置一部分`,
+        );
+      }
+
+      const occupied = new Set<string>();
+      positioned.forEach((node) => {
+        const key = `${node.flowPosition!.column}:${node.flowPosition!.lane}`;
+        if (occupied.has(key)) {
+          throw new GraphValidationError(
+            `流程层 ${parentId} 存在重复坐标 ${key}`,
+          );
+        }
+        occupied.add(key);
+      });
+    });
   }
 
   for (const node of worldCase.nodes) {

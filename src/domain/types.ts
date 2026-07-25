@@ -68,6 +68,10 @@ export type GraphNode = {
     effect?: string;
   };
   index?: number;
+  flowPosition?: {
+    column: number;
+    lane: number;
+  };
 };
 
 export type GraphEdge = {
@@ -85,6 +89,7 @@ export type GraphEdge = {
   evidence?: string;
   evidenceGrade?: EvidenceGrade;
   verification?: string;
+  flowStyle?: "primary" | "support";
   origin?: {
     id: string;
     source: string;
@@ -103,6 +108,9 @@ export type WorldCase = {
   accent: string;
   accentSoft: string;
   keyInsight: string;
+  layout?: {
+    mode: "network" | "workflow";
+  };
   nodes: GraphNode[];
   edges: GraphEdge[];
 };

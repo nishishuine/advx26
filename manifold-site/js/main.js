@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initCanvas();
   initReveal();
   initMarquee();
+  if (window.MF_I18N) MF_I18N.init();   // 中英切换（须在描边字渲染前应用语言）
   initSvgStroke();
 });
 
@@ -28,8 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
    -webkit-text-stroke 在移动端受合成粗体/内核差异影响会出现重影接缝，
    运行时把 .stroke 文字替换成 SVG <text fill=none stroke>，矢量描边一次成型 */
 function initSvgStroke() {
-  const els = document.querySelectorAll(".hero-title .stroke, .sec-title .stroke, .foot-title .stroke");
-  if (!els.length) return;
+  const SEL = ".hero-title .stroke, .sec-title .stroke, .foot-title .stroke";
   const NS = "http://www.w3.org/2000/svg";
 
   function render(el) {
@@ -70,7 +70,9 @@ function initSvgStroke() {
     svg.style.verticalAlign = -(bb.y + bb.height + pad) + "px";
   }
 
-  const renderAll = () => els.forEach(render);
+  /* 每次重查询：i18n 切换语言会用 innerHTML 重建 .stroke 节点 */
+  const renderAll = () => document.querySelectorAll(SEL).forEach(render);
+  window.__mfStrokeRender = renderAll;
   renderAll();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderAll);
   let tm;

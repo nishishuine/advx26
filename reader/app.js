@@ -678,7 +678,7 @@ function renderGraph(){
     (S.graphMode==="read"?`（已读至第 ${S.chapter} 章第 ${S.page+1} 页）`:"（全书，含剧透）");
   const data={nodes:new vis.DataSet(nodes),edges:new vis.DataSet(edges)};
   const opt={physics:{enabled:true,barnesHut:{gravitationalConstant:-8000,springLength:200,centralGravity:.08,damping:.4,avoidOverlap:.8}},
-    interaction:{hover:true,tooltipDelay:120,zoomView:true,dragView:true},edges:{smooth:true}};
+    interaction:{hover:true,tooltipDelay:120,zoomView:true,dragView:true,zoomSpeed:1/3},edges:{smooth:true}};
   if(S.graphNet)S.graphNet.destroy();
   S.graphNet=new vis.Network($("#graphCanvas"),data,opt);
   S.graphNet.on("click",p=>{if(p.nodes.length>0)openCharCard(p.nodes[0]);});

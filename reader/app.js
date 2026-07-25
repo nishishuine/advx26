@@ -22,7 +22,7 @@ const S={
   threshold:{chapter:1,page:0},
   spoilerAll:false,origMode:"always",dark:false,
   graphMode:"read",graphNet:null,graphFullConfirmed:false,
-  timelineFull:false,
+  timelineFull:false,askScope:"read",
   sentences:[],pageChars:[],pageSents:[],appearedChars:new Set(),
   tts:{playing:false,paused:false,idx:0,rate:1,voice:null},
   paginating:false
@@ -177,6 +177,7 @@ function bindUI(){
   // 应用已保存的语速
   $$("#ttsRates button").forEach(b=>{if(+b.dataset.rate===S.tts.rate)b.classList.add("on");});
   $("#graphModeSeg").addEventListener("click",e=>{const b=e.target.closest(".seg-btn");if(b)setGraphMode(b.dataset.gmode);});
+  $("#askScopeSeg").addEventListener("click",e=>{const b=e.target.closest(".seg-btn");if(b)setAskScope(b.dataset.ascope);});
   $("#btnRelayout").onclick=()=>{if(S.graphNet){S.graphNet.setOptions({physics:true});setTimeout(()=>S.graphNet.setOptions({physics:false}),2500);}};
   $("#btnExportGraph").onclick=exportGraphPNG;
   $("#charSearch").oninput=renderChars;
@@ -811,10 +812,23 @@ function renderTimeline(){
   $$("#tlList .tl-event-char").forEach(el=>{el.onclick=()=>openCharCard(el.dataset.cid);});
 }
 
-/* ═══════ ask ═══════ *//* ═══════ ask ═══════ */
+/* ═══════ ask：阶跃星辰 Step 3.7 Flash ═══════ */
+const ASK={history:[],busy:false};
+function setAskScope(scope){
+  if(scope===S.askScope)return;
+  S.askScope=scope;
+  $$("#askScopeSeg .seg-btn").forEach(b=>b.classList.toggle("active",b.dataset.ascope===scope));
+  if(scope==="full")toast("⚠️ 全书分析模式：回答可能剧透后面的情节");
+  renderAskIntro();
+}
 function renderAskIntro(){
-  $("#askIntro").innerHTML=`我只根据你已读到的 <b>第 ${S.chapter} 章·第 ${S.page+1} 页</b> 为止的内容回答，绝不剧透后面的事。
-    <span class="ask-hint">由本地演示引擎回答（基于预处理数据），接入 LLM API 后可自由提问。</span>`;
+  if(S.askScope==="full"){
+    $("#askIntro").innerHTML=`当前为 <b>全书分析</b> 模式：我会基于整本书作答，<b>可能剧透</b>后面的情节。
+      <span class="ask-hint">由阶跃星辰 Step 3.7 Flash 驱动，支持自由提问。</span>`;
+  }else{
+    $("#askIntro").innerHTML=`我只根据你已读到的 <b>第 ${S.chapter} 章·第 ${S.page+1} 页</b> 为止的内容回答，绝不剧透后面的事。
+      <span class="ask-hint">由阶跃星辰 Step 3.7 Flash 驱动，支持自由提问；想聊全书可切换上方「分析全书」。</span>`;
+  }
   const known=chars.filter(c=>S.appearedChars.has(c.id));
   const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
   const chips=[];
@@ -823,81 +837,167 @@ function renderAskIntro(){
     if(known.length>1){let b=pick(known),t=0;while(b.id===a.id&&t++<5)b=pick(known);
       chips.push(`${a.short_name||a.name}和${b.short_name||b.name}什么关系？`);}
   }
-  if(S.chapter>1)chips.push(`第${Math.max(1,S.chapter-1)}章发生了什么？`);
-  chips.push("帮我梳理布恩迪亚家族的主要人物");
+  if(S.askScope==="full"){
+    chips.push("这本书想表达什么？","帮我梳理全书主要人物和关系");
+  }else{
+    if(S.chapter>1)chips.push(`第${Math.max(1,S.chapter-1)}章发生了什么？`);
+    chips.push("帮我梳理目前出场的主要人物");
+  }
   $("#askChips").innerHTML=chips.map(c=>`<span class="ask-chip">${esc(c)}</span>`).join("");
   $$("#askChips .ask-chip").forEach(el=>el.onclick=()=>{$("#askInput").value=el.textContent;sendAsk();});
   if(!$("#askLog").children.length){
-    $("#askLog").innerHTML=`<div class="ask-bubble ai">你好！我是你的阅读伴侣。试试上面的问题，或直接问我「某角色是谁」「两人什么关系」。我只知道你已读到的第 ${S.chapter} 章第 ${S.page+1} 页为止的内容。</div>`;
+    $("#askLog").innerHTML=`<div class="ask-bubble ai"><p>你好！我是你的阅读伴侣。默认只聊你已读到的内容（第 ${S.chapter} 章第 ${S.page+1} 页为止），想聊整本书可切换上方「分析全书」。</p></div>`;
   }
 }
-function sendAsk(){
-  const q=($("#askInput").value||"").trim();if(!q)return;
+/* ── 上下文构建 ── */
+function askCharData(){
+  const full=S.askScope==="full";
+  const list=chars.filter(c=>full||S.appearedChars.has(c.id));
+  return list.map(c=>{
+    const evs=(c.key_events||[]).filter(e=>full||e.chapter<=S.chapter).map(e=>`第${e.chapter}章:${e.event}`);
+    const rels=(c.relations||[]).filter(r=>full||Math.min(...(r.based_on_chapters||[1]))<=S.chapter)
+      .map(r=>{const t=charById[r.target_id];return t?`${r.label||r.type}→${t.name}`:null;}).filter(Boolean);
+    const o={名:c.name};
+    if(c.original_name)o.原名=c.original_name;
+    if(c.aliases&&c.aliases.length)o.别名=c.aliases.join("/");
+    o.身份=c.identity||"";
+    if(full&&c.full_description)o.介绍=c.full_description;
+    if(c.family)o.家族=c.family;
+    o.首次出场="第"+c.first_chapter+"章";
+    if(rels.length)o.关系=rels.join("；");
+    if(evs.length)o.事迹=evs.join("；");
+    return o;
+  });
+}
+function askRecentText(){
+  if(S.askScope==="full"||!S.sentences.length)return "";
+  const ps=S.pageSents[S.page];
+  const lastSid=ps&&ps.length?ps[ps.length-1]:S.sentences.length-1;
+  let txt=S.sentences.filter(s=>s.sid<=lastSid).map(s=>s.text).join("");
+  if(txt.length>6000)txt="……"+txt.slice(-6000);
+  return txt;
+}
+function askSystemPrompt(){
+  const full=S.askScope==="full";
+  const pos=`第 ${S.chapter} 章·第 ${S.page+1} 页`;
+  let sys=`你是「AI 阅读伴侣」，正在陪读者阅读《${book.title}》（${book.author}，全书共 ${book.total_chapters} 章）。请用中文回答，并用 Markdown 排版（可用标题、列表、加粗、表格等）。回答要准确、简洁、有文学感，不要罗嗦。`;
+  if(full){
+    sys+=`\n当前为「全书分析」模式：读者已同意接受剧透，你可以基于整本书自由分析主题、人物命运与结局。`;
+  }else{
+    sys+=`\n【防剧透铁律】读者当前只读到 ${pos}。你只能根据截至该位置的内容回答；对之后的情节、人物命运、结局，一律不得透露，也不得暗示。若问题涉及后文，请温和告知「继续读下去就会知道」并拒绝剧透。`;
+  }
+  sys+=`\n\n【本书人物资料（预处理数据，供参考）】\n${JSON.stringify(askCharData())}`;
+  const recent=askRecentText();
+  if(recent)sys+=`\n\n【读者刚读到的正文片段（第 ${S.chapter} 章至当前页）】\n${recent}`;
+  return sys;
+}
+/* ── 发送（SSE 流式） ── */
+async function sendAsk(){
+  const q=($("#askInput").value||"").trim();if(!q||ASK.busy)return;
   $("#askInput").value="";
   const log=$("#askLog");
   log.insertAdjacentHTML("beforeend",`<div class="ask-bubble user">${esc(q)}</div>`);
-  log.scrollTop=log.scrollHeight;
-  setTimeout(()=>{log.insertAdjacentHTML("beforeend",`<div class="ask-bubble ai">${answerQuery(q)}</div>`);log.scrollTop=log.scrollHeight;},180);
-}
-function findMentioned(q){
-  const found=new Map();
-  Object.entries(aliasMap).sort((a,b)=>b[0].length-a[0].length).forEach(([name,id])=>{
-    if(q.includes(name)&&!found.has(id))found.set(id,charById[id]);});
-  chars.sort((a,b)=>b.name.length-a.name.length).forEach(c=>{if(q.includes(c.name))found.set(c.id,c);});
-  return[...found.values()];
-}
-function answerQuery(q){
-  const mentioned=findMentioned(q);
-  const chM=q.match(/第\s*(\d+)\s*章/);const chNum=chM?+chM[1]:0;
-  const future=mentioned.filter(c=>!S.appearedChars.has(c.id));
-  if(future.length){
-    return future.map(c=>`「${c.short_name||c.name}」${c.first_chapter>S.chapter?`在第 <b>${c.first_chapter}</b> 章才会登场`:"尚未在你读到的位置出场"}，继续阅读就会揭晓，我不剧透。`).join("<br>");
+  const bubble=document.createElement("div");
+  bubble.className="ask-bubble ai thinking";bubble.textContent="思考中";
+  log.appendChild(bubble);log.scrollTop=log.scrollHeight;
+  ASK.busy=true;$("#askSend").disabled=true;
+  const messages=[{role:"system",content:askSystemPrompt()},...ASK.history.slice(-8),{role:"user",content:q}];
+  let acc="";
+  try{
+    const base=(window.RC_CONFIG&&RC_CONFIG.API_BASE)||"";
+    const res=await fetch(base+"/api/ai/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages})});
+    if(!res.ok){
+      let msg="AI 服务暂时不可用";
+      try{msg=(await res.json()).error||msg;}catch(e){}
+      throw new Error(msg);
+    }
+    const reader=res.body.getReader(),dec=new TextDecoder();
+    let buf="";
+    for(;;){
+      const{done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split("\n");buf=lines.pop();
+      for(const line of lines){
+        const s=line.trim();
+        if(!s.startsWith("data:"))continue;
+        const payload=s.slice(5).trim();
+        if(payload==="[DONE]")continue;
+        try{
+          const j=JSON.parse(payload);
+          const delta=j.choices&&j.choices[0]&&j.choices[0].delta;
+          if(delta&&delta.content){
+            acc+=delta.content;
+            bubble.classList.remove("thinking");
+            bubble.innerHTML=mdToHtml(acc);
+            log.scrollTop=log.scrollHeight;
+          }
+        }catch(e){}
+      }
+    }
+    if(!acc)throw new Error("AI 没有返回内容，请重试");
+    ASK.history.push({role:"user",content:q},{role:"assistant",content:acc});
+    if(ASK.history.length>16)ASK.history=ASK.history.slice(-16);
+  }catch(err){
+    bubble.classList.remove("thinking");
+    bubble.innerHTML=`<p>😥 ${esc(err.message||"请求失败，请稍后重试")}</p>`;
+  }finally{
+    ASK.busy=false;$("#askSend").disabled=false;
+    log.scrollTop=log.scrollHeight;
   }
-  if(mentioned.length>=2&&/关系|认识|什么关系|和.{0,8}什么/.test(q)){
-    const[a,b]=mentioned;
-    const rels=(a.relations||[]).filter(r=>r.target_id===b.id&&Math.min(...(r.based_on_chapters||[99]))<S.chapter);
-    const rels2=(b.relations||[]).filter(r=>r.target_id===a.id&&Math.min(...(r.based_on_chapters||[99]))<S.chapter);
-    const all=[...rels,...rels2];
-    if(all.length)return `截至当前进度，<span class="ai-char" style="color:${a.color}">${esc(a.short_name||a.name)}</span> 与 <span class="ai-char" style="color:${b.color}">${esc(b.short_name||b.name)}</span> 的关系：`+all.map(r=>`<b>${esc(r.label||r.type)}</b>（${esc(r.type)}）`).join("、")+"。";
-    return `截至当前进度，书中还没有直接写到 TA 们的明确关系。继续往后读看看？`;
-  }
-  if(mentioned.length>=1&&(/是谁|什么人|介绍|是谁来着/.test(q))){
-    const c=mentioned[0];
-    const evs=(c.key_events||[]).filter(e=>e.chapter<S.chapter).slice(0,3);
-    let s=`<span class="ai-char" style="color:${c.color}">${esc(c.name)}</span>：${esc(c.identity||"")}。`;
-    if(evs.length)s+=" 已知事迹："+evs.map(e=>`第${e.chapter}章${esc(e.event)}`).join("；")+"。";
-    if(c.key_events&&c.key_events.some(e=>e.chapter>=S.chapter))s+=" 本章及后续的事迹等你读完再聊。";
+}
+/* ── 轻量 Markdown 渲染（先转义再排版，防 XSS） ── */
+function mdToHtml(md){
+  const codes=[];
+  md=md.replace(/```(\w*)\n?([\s\S]*?)(?:```|$)/g,(_,lang,code)=>{
+    codes.push(`<pre><code>${esc(code.replace(/\n$/,""))}</code></pre>`);
+    return `\u0000CODE${codes.length-1}\u0000`;});
+  const inline=s=>{
+    s=esc(s);
+    s=s.replace(/`([^`]+)`/g,(_,c)=>`<code>${c}</code>`);
+    s=s.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
+    s=s.replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<em>$2</em>");
+    s=s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
     return s;
+  };
+  const lines=md.split("\n");
+  let html="",i=0,para=[];
+  const closePara=()=>{if(para.length){html+=`<p>${para.map(inline).join("<br>")}</p>`;para=[];}};
+  while(i<lines.length){
+    const t=lines[i].trim();
+    if(!t){closePara();i++;continue;}
+    const code=t.match(/^\u0000CODE(\d+)\u0000$/);
+    if(code){closePara();html+=codes[+code[1]];i++;continue;}
+    const h=t.match(/^(#{1,4})\s+(.*)$/);
+    if(h){closePara();html+=`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`;i++;continue;}
+    if(/^(?:---+|\*\*\*+|___+)$/.test(t)){closePara();html+="<hr>";i++;continue;}
+    if(/^>\s?/.test(t)){
+      closePara();const buf=[];
+      while(i<lines.length&&/^>\s?/.test(lines[i].trim())){buf.push(lines[i].trim().replace(/^>\s?/,""));i++;}
+      html+=`<blockquote>${buf.map(inline).join("<br>")}</blockquote>`;continue;
+    }
+    if(/^[-*+]\s+/.test(t)){
+      closePara();const items=[];
+      while(i<lines.length&&/^[-*+]\s+/.test(lines[i].trim())){items.push(inline(lines[i].trim().replace(/^[-*+]\s+/,"")));i++;}
+      html+=`<ul>${items.map(x=>`<li>${x}</li>`).join("")}</ul>`;continue;
+    }
+    if(/^\d+[.、)]\s*/.test(t)){
+      closePara();const items=[];
+      while(i<lines.length&&/^\d+[.、)]\s*/.test(lines[i].trim())){items.push(inline(lines[i].trim().replace(/^\d+[.、)]\s*/,"")));i++;}
+      html+=`<ol>${items.map(x=>`<li>${x}</li>`).join("")}</ol>`;continue;
+    }
+    if(/^\|.*\|$/.test(t)&&i+1<lines.length&&/^\|[\s:|-]+\|$/.test(lines[i+1].trim())){
+      closePara();
+      const parse=r=>r.trim().replace(/^\||\|$/g,"").split("|").map(c=>inline(c.trim()));
+      const head=parse(t);i+=2;
+      const rows=[];
+      while(i<lines.length&&/^\|.*\|$/.test(lines[i].trim())){rows.push(parse(lines[i].trim()));i++;}
+      html+=`<table><thead><tr>${head.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;continue;
+    }
+    para.push(t);i++;
   }
-  if(mentioned.length>=1&&chNum){
-    const c=mentioned[0];
-    if(chNum>=S.chapter)return `第 ${chNum} 章你还没读完哦，防剧透，读完再来问我。`;
-    const evs=(c.key_events||[]).filter(e=>e.chapter===chNum);
-    if(evs.length)return `在第 ${chNum} 章，<span class="ai-char" style="color:${c.color}">${esc(c.short_name||c.name)}</span>：`+evs.map(e=>esc(e.event)).join("；")+"。";
-    return `第 ${chNum} 章的记录里，没有专门提到 ${esc(c.short_name||c.name)} 的关键事迹。`;
-  }
-  if(chNum){
-    if(chNum>=S.chapter)return `第 ${chNum} 章你还没读完哦，防剧透，读完再来问我。`;
-    const evs=[];chars.forEach(c=>{(c.key_events||[]).forEach(e=>{if(e.chapter===chNum)evs.push({c,e:e.event});});});
-    if(!evs.length)return `第 ${chNum} 章没有特别记录的关键事件。`;
-    return `第 ${chNum} 章里：`+evs.slice(0,6).map(({c,e})=>`<span class="ai-char" style="color:${c.color}">${esc(c.short_name||c.name)}</span>${esc(e)}`).join("；")+"。";
-  }
-  if(mentioned.length>=1&&/做了什么|经历|事迹|干了什么/.test(q)){
-    const c=mentioned[0];
-    const evs=(c.key_events||[]).filter(e=>e.chapter<S.chapter);
-    if(!evs.length)return `截至当前进度，还没有 ${esc(c.short_name||c.name)} 的事迹记录。`;
-    return `<span class="ai-char" style="color:${c.color}">${esc(c.short_name||c.name)}</span> 截至第 ${S.chapter-1} 章：`+evs.map(e=>`第${e.chapter}章${esc(e.event)}`).join("；")+"。";
-  }
-  if(/家族|布恩迪亚|主要人物|梳理|都有谁/.test(q)){
-    const fam=chars.filter(c=>(c.family||"").includes("布恩迪亚")&&S.appearedChars.has(c.id));
-    return `已出场范围内的布恩迪亚家族成员（共 ${fam.length} 位）：`+
-      fam.map(c=>`<span class="ai-char" style="color:${c.color}">${esc(c.short_name||c.name)}</span>（${esc((c.identity||"").slice(0,16))}）`).join("、")+"。";
-  }
-  if(mentioned.length===1){
-    const c=mentioned[0];
-    return `<span class="ai-char" style="color:${c.color}">${esc(c.name)}</span>：${esc(c.identity||"")}。想了解更多可以问"TA做了什么"或"TA和某某什么关系"。`;
-  }
-  return `这个问题我不太确定怎么回答。试试问：<br>· 「${mentioned[0]?(mentioned[0].short_name||mentioned[0].name):'奥雷里亚诺·布恩迪亚'}是谁？」<br>· 「A 和 B 什么关系？」<br>· 「第 ${Math.max(1,S.chapter-1)} 章发生了什么？」`;
+  closePara();
+  return html||`<p>${inline(md)}</p>`;
 }
 
 /* ═══════ TTS ═══════ */

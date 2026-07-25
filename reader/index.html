@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>百年孤独 · AI 阅读伴侣</title>
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body data-theme="light">
 
@@ -152,10 +152,16 @@
   <!-- ─── 问 AI ─── -->
   <section class="panel" id="panel-ask">
     <div class="ask-intro" id="askIntro"></div>
-    <div class="ask-chips" id="askChips"></div>
+    <div class="ask-toolbar">
+      <div class="seg" id="askScopeSeg">
+        <button class="seg-btn active" data-ascope="read">🛡 只分析到当前进度</button>
+        <button class="seg-btn" data-ascope="full">⚠️ 分析全书（含剧透）</button>
+      </div>
+      <div class="ask-chips" id="askChips"></div>
+    </div>
     <div class="ask-log" id="askLog"></div>
     <div class="ask-input-row">
-      <input class="ask-input" id="askInput" placeholder="问点已读内容：「XXX 是谁？」「A 和 B 什么关系？」「第 N 章发生了什么？」">
+      <input class="ask-input" id="askInput" placeholder="随便问：「XXX 是谁？」「A 和 B 什么关系？」「这本书想表达什么？」">
       <button class="btn-primary" id="askSend">发送</button>
     </div>
   </section>
@@ -209,6 +215,6 @@
 <script src="config.js"></script>
 <script src="api.js"></script>
 <script src="upload-store.js?v=2"></script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

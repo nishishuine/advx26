@@ -9,6 +9,7 @@ import { migrate } from "./db.js";
 import { authRouter } from "./auth.js";
 import { booksRouter, storeRouter } from "./books.js";
 import { chainEnabled } from "./chain.js";
+import { aiRouter, aiEnabled } from "./ai.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -21,10 +22,11 @@ app.use(cors({
 }));
 app.use(express.json({ limit: "1mb" }));
 
-app.get("/api/health", (_req, res) => res.json({ ok: true, chain: chainEnabled, time: Date.now() }));
+app.get("/api/health", (_req, res) => res.json({ ok: true, chain: chainEnabled, ai: aiEnabled, time: Date.now() }));
 app.use("/api/auth", authRouter);
 app.use("/api/books", booksRouter);
 app.use("/api/store", storeRouter);
+app.use("/api/ai", aiRouter);
 
 /* multer 超限等错误的兜底 */
 app.use((err, _req, res, _next) => {

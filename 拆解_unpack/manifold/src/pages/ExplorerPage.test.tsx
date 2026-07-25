@@ -8,6 +8,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LanguageProvider } from "../i18n/LanguageProvider";
 import { ExplorerPage } from "./ExplorerPage";
 
 vi.mock("@xyflow/react", async (importOriginal) => {
@@ -110,6 +111,50 @@ describe("ExplorerPage mode navigation", () => {
       screen.getByAltText(
         "用户实拍的 Orange Pi 3B 主板正面，可见网口、USB、HDMI、Type-C 和 GPIO 排针",
       ),
+    ).toBeTruthy();
+  });
+
+  it("切换语言后重新加载同一条拆解链路", async () => {
+    window.localStorage.clear();
+    render(
+      <LanguageProvider>
+        <MemoryRouter
+          initialEntries={[
+            "/explore/orange-pi-first-boot/orange-pi-system?view=structure",
+          ]}
+        >
+          <Routes>
+            <Route
+              path="/explore/:caseId/:nodeId"
+              element={<ExplorerPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </LanguageProvider>,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Orange Pi 第一张网页",
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "切换为英文" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your First Orange Pi Web Page",
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Switch to Mongolian" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Orange Pi дээрх анхны веб хуудас",
+      }),
     ).toBeTruthy();
   });
 });

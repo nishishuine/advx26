@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { StaticGraphRepository } from "./repository";
+import {
+  StaticGraphRepository,
+  getGraphRepository,
+} from "./repository";
 
 describe("StaticGraphRepository", () => {
   const repository = new StaticGraphRepository();
@@ -168,5 +171,45 @@ describe("StaticGraphRepository", () => {
     expect(sshText).toContain("ssh {{USER}}@{{IP}}");
     expect(sshText).toContain("whoami");
     expect(sshText).toContain("分支 B");
+  });
+
+  it("英文和蒙古文使用同一链路、步骤与命令", async () => {
+    const chineseCase = await getGraphRepository("zh").getCase(
+      "orange-pi-first-boot",
+    );
+    const englishCase = await getGraphRepository("en").getCase(
+      "orange-pi-first-boot",
+    );
+    const mongolianCase = await getGraphRepository("mn").getCase(
+      "orange-pi-first-boot",
+    );
+    const englishGuide = await getGraphRepository("en").getBuildGuide(
+      "orange-pi-first-boot",
+    );
+    const mongolianGuide = await getGraphRepository("mn").getBuildGuide(
+      "orange-pi-first-boot",
+    );
+
+    expect(englishCase.title).toContain("From Your Computer");
+    expect(mongolianCase.title).toContain("Компьютероос");
+    expect(englishCase.nodes.map((node) => node.id)).toEqual(
+      chineseCase.nodes.map((node) => node.id),
+    );
+    expect(mongolianCase.edges.map((edge) => edge.id)).toEqual(
+      chineseCase.edges.map((edge) => edge.id),
+    );
+    expect(englishGuide?.steps.map((step) => step.id)).toEqual(
+      mongolianGuide?.steps.map((step) => step.id),
+    );
+    expect(
+      JSON.stringify(
+        englishGuide?.steps.find((step) => step.id === "first-ssh"),
+      ),
+    ).toContain("ssh {{USER}}@{{IP}}");
+    expect(
+      JSON.stringify(
+        mongolianGuide?.steps.find((step) => step.id === "first-ssh"),
+      ),
+    ).toContain("ssh {{USER}}@{{IP}}");
   });
 });

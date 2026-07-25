@@ -4,6 +4,7 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
+import { useLanguage } from "../i18n/LanguageProvider";
 
 export type BuildStepNodeData = {
   stepId: string;
@@ -22,6 +23,7 @@ export function BuildStepFlowNode({
   data,
   selected,
 }: NodeProps<BuildStepNode>) {
+  const { text } = useLanguage();
   const {
     stepId,
     index,
@@ -46,7 +48,11 @@ export function BuildStepFlowNode({
         .filter(Boolean)
         .join(" ")}
       aria-current={current ? "step" : undefined}
-      aria-label={`第 ${index} 步：${title}`}
+      aria-label={text(
+        `第 ${index} 步：${title}`,
+        `Step ${index}: ${title}`,
+        `${index}-р алхам: ${title}`,
+      )}
       data-complete={complete ? "true" : "false"}
       data-step-id={stepId}
       title={`${phase} · ${duration}`}

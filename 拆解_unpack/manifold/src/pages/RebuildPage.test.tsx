@@ -10,6 +10,7 @@ import {
 } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { graphRepository } from "../domain/repository";
+import { LanguageProvider } from "../i18n/LanguageProvider";
 import { RebuildPage } from "./RebuildPage";
 
 vi.mock("@xyflow/react", async (importOriginal) => {
@@ -287,6 +288,49 @@ describe("RebuildPage executable runbook", () => {
       screen.getByAltText(
         "用户实拍的 Orange Pi 3B 主板背面，可见右侧边缘的 TF 卡槽、排线接口与焊点区域",
       ),
+    ).toBeTruthy();
+  });
+
+  it("英文和蒙古文切换后保持同一个打造步骤", async () => {
+    render(
+      <LanguageProvider>
+        <MemoryRouter
+          initialEntries={[
+            "/rebuild/orange-pi-first-boot?step=1",
+          ]}
+        >
+          <Routes>
+            <Route
+              path="/rebuild/:caseId"
+              element={<RebuildPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </LanguageProvider>,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "先把 6 样东西放到桌面上",
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "切换为英文" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Put these 6 items on the table first",
+      }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Switch to Mongolian" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Эхлээд эдгээр 6 зүйлийг ширээн дээрээ тавина",
+      }),
     ).toBeTruthy();
   });
 });

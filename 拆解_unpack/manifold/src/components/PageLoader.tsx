@@ -1,4 +1,8 @@
-export function PageLoader({ label = "正在整理关系…" }: { label?: string }) {
+import { useLanguage } from "../i18n/LanguageProvider";
+
+export function PageLoader({ label }: { label?: string }) {
+  const { text } = useLanguage();
+
   return (
     <div className="page-loader">
       <span className="page-loader__bits" aria-hidden="true">
@@ -6,7 +10,14 @@ export function PageLoader({ label = "正在整理关系…" }: { label?: string
           <i key={index} />
         ))}
       </span>
-      <p>{label}</p>
+      <p>
+        {label ??
+          text(
+            "正在整理关系…",
+            "Organizing the relationships…",
+            "Холбоосуудыг эмхэлж байна…",
+          )}
+      </p>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LanguageProvider } from "../i18n/LanguageProvider";
 import { HomePage } from "./HomePage";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
@@ -28,25 +29,28 @@ function ResultPage({ destination }: { destination: "explore" | "rebuild" }) {
 
 function renderHome() {
   return render(
-    <MemoryRouter initialEntries={["/"]}>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route
-          path="/explore/:caseId"
-          element={<ResultPage destination="explore" />}
-        />
-        <Route
-          path="/rebuild/:caseId"
-          element={<ResultPage destination="rebuild" />}
-        />
-      </Routes>
-    </MemoryRouter>,
+    <LanguageProvider>
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/explore/:caseId"
+            element={<ResultPage destination="explore" />}
+          />
+          <Route
+            path="/rebuild/:caseId"
+            element={<ResultPage destination="rebuild" />}
+          />
+        </Routes>
+      </MemoryRouter>
+    </LanguageProvider>,
   );
 }
 
 describe("HomePage conversation entry", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -144,5 +148,30 @@ describe("HomePage conversation entry", () => {
         "case:orange-pi-first-boot;from:conversation",
       ),
     ).toBeNull();
+  });
+
+  it("可以在中文、英文和蒙古文之间即时切换", () => {
+    renderHome();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "切换为英文" }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "What would you like to do?",
+      }),
+    ).toBeTruthy();
+    expect(document.documentElement.lang).toBe("en");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Switch to Mongolian" }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: "Та юу хийхийг хүсэж байна?",
+      }),
+    ).toBeTruthy();
+    expect(document.documentElement.lang).toBe("mn");
+    expect(window.localStorage.getItem("manifold-language")).toBe("mn");
   });
 });

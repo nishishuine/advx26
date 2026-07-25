@@ -1179,6 +1179,55 @@ blockquote {
   letter-spacing: -0.035em;
 }
 
+.language-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid #e5e5e7;
+  border-radius: 10px;
+  background: rgba(248, 248, 250, 0.92);
+}
+
+.language-switch button {
+  min-width: 30px;
+  height: 24px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 7px;
+  color: #86868b;
+  background: transparent;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.015em;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.language-switch button:hover {
+  color: #1d1d1f;
+}
+
+.language-switch button.is-active {
+  color: #1d1d1f;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.09);
+}
+
+.language-switch button:focus-visible {
+  outline: 2px solid #0071e3;
+  outline-offset: 1px;
+}
+
+.chat-home__header .language-switch {
+  margin-left: auto;
+}
+
 .chat-home__stage {
   display: flex;
   width: min(720px, calc(100% - 32px));
@@ -1577,6 +1626,10 @@ blockquote {
   font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.035em;
+}
+
+.explorer-header .language-switch {
+  margin-left: 0;
 }
 
 .explorer-header__divider {

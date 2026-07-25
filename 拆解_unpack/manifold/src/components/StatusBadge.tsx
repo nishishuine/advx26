@@ -1,27 +1,32 @@
 import { CircleCheck, Eye, Sparkles } from "lucide-react";
 import type { NodeStatus } from "../domain/types";
+import { useLanguage } from "../i18n/LanguageProvider";
 
 const statusConfig = {
   observed: {
-    label: "已观察",
+    labels: ["已观察", "Observed", "Ажигласан"],
     Icon: Eye,
   },
   verified: {
-    label: "已验证",
+    labels: ["已验证", "Verified", "Баталсан"],
     Icon: CircleCheck,
   },
   inferred: {
-    label: "推断",
+    labels: ["推断", "Inferred", "Таамагласан"],
     Icon: Sparkles,
   },
-} satisfies Record<NodeStatus, { label: string; Icon: typeof Eye }>;
+} satisfies Record<
+  NodeStatus,
+  { labels: [string, string, string]; Icon: typeof Eye }
+>;
 
 export function StatusBadge({ status }: { status: NodeStatus }) {
-  const { label, Icon } = statusConfig[status];
+  const { text } = useLanguage();
+  const { labels, Icon } = statusConfig[status];
   return (
     <span className={`status-badge status-badge--${status}`}>
       <Icon size={12} />
-      {label}
+      {text(...labels)}
     </span>
   );
 }

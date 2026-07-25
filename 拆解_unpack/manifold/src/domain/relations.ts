@@ -1,4 +1,5 @@
 import type { DomainType, RelationType, ViewType } from "./types";
+import type { Locale } from "../i18n/LanguageProvider";
 
 export const OBJECT_RELATIONS: RelationType[] = [
   "contains",
@@ -79,6 +80,101 @@ export const VIEW_LABELS: Record<ViewType, string> = {
   code: "代码",
   causal: "因果",
 };
+
+const EN_RELATION_LABELS: Record<RelationType, string> = {
+  contains: "contains",
+  supports: "supports",
+  powers: "powers",
+  controls: "controls",
+  senses: "senses",
+  signals: "sends signal",
+  transfers_energy: "transfers energy",
+  transports: "transports",
+  regulates: "regulates",
+  exchanges: "exchanges",
+  protects: "protects",
+  depends_on: "depends on",
+  transforms: "transforms",
+  moves: "creates motion",
+  encodes: "encodes",
+  modulates: "modulates",
+  drives: "drives",
+  emits: "emits",
+  detects: "detects",
+  samples: "samples",
+  decodes: "decodes",
+  validates: "validates",
+  diffuses: "diffuses",
+  osmosis: "osmosis",
+  pumps: "pumps",
+  activates: "activates",
+  inhibits: "inhibits",
+  catalyzes: "catalyzes",
+};
+
+const MN_RELATION_LABELS: Record<RelationType, string> = {
+  contains: "агуулна",
+  supports: "тулгуурлана",
+  powers: "тэжээнэ",
+  controls: "удирдана",
+  senses: "мэдэрнэ",
+  signals: "дохио дамжуулна",
+  transfers_energy: "энерги дамжуулна",
+  transports: "зөөвөрлөнө",
+  regulates: "зохицуулна",
+  exchanges: "солилцоно",
+  protects: "хамгаална",
+  depends_on: "хамаарна",
+  transforms: "хувиргана",
+  moves: "хөдөлгөөн үүсгэнэ",
+  encodes: "кодлоно",
+  modulates: "модуляцлана",
+  drives: "ажиллуулна",
+  emits: "ялгаруулна",
+  detects: "илрүүлнэ",
+  samples: "сорьц авна",
+  decodes: "тайлна",
+  validates: "баталгаажуулна",
+  diffuses: "диффузлэнэ",
+  osmosis: "осмос явуулна",
+  pumps: "шахна",
+  activates: "идэвхжүүлнэ",
+  inhibits: "саатуулна",
+  catalyzes: "хурдасгана",
+};
+
+const EN_VIEW_LABELS: Record<ViewType, string> = {
+  structure: "Structure",
+  signal: "Signal",
+  energy: "Energy",
+  matter: "Matter",
+  code: "Code",
+  causal: "Cause",
+};
+
+const MN_VIEW_LABELS: Record<ViewType, string> = {
+  structure: "Бүтэц",
+  signal: "Дохио",
+  energy: "Энерги",
+  matter: "Бодис",
+  code: "Код",
+  causal: "Шалтгаан",
+};
+
+export function getRelationLabel(
+  relation: RelationType,
+  locale: Locale,
+) {
+  if (locale === "en") return EN_RELATION_LABELS[relation];
+  if (locale === "mn") return MN_RELATION_LABELS[relation];
+  return RELATION_LABELS[relation];
+}
+
+export function getViewLabel(view: ViewType, locale: Locale) {
+  if (locale === "en") return EN_VIEW_LABELS[view];
+  if (locale === "mn") return MN_VIEW_LABELS[view];
+  return VIEW_LABELS[view];
+}
 
 export const getAllowedRelations = (domain: DomainType) =>
   domain === "object" ? OBJECT_RELATIONS : LIFE_RELATIONS;

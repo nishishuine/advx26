@@ -7,8 +7,6 @@ import type {
   WorldCase,
 } from "./types";
 
-export const MAX_CHILDREN_PER_LEVEL = 8;
-
 export class GraphValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -183,14 +181,6 @@ export function validateWorldCase(worldCase: WorldCase): WorldCase {
       ...(siblingGroups.get(node.parentId) ?? []),
       node,
     ]);
-  }
-
-  for (const [parentId, count] of counts.entries()) {
-    if (count > MAX_CHILDREN_PER_LEVEL) {
-      throw new GraphValidationError(
-        `节点 ${parentId} 的子节点数量为 ${count}，超过 ${MAX_CHILDREN_PER_LEVEL} 个上限`,
-      );
-    }
   }
 
   if (worldCase.layout?.mode === "workflow") {

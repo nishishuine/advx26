@@ -4,14 +4,12 @@ import { StaticGraphRepository } from "./repository";
 describe("StaticGraphRepository", () => {
   const repository = new StaticGraphRepository();
 
-  it("读取两个静态案例并保持案例摘要可用", async () => {
+  it("只读取当前 Orange Pi 静态案例", async () => {
     const cases = await repository.listCases();
 
-    expect(cases).toHaveLength(2);
-    expect(cases.map((worldCase) => worldCase.domain).sort()).toEqual([
-      "life",
-      "object",
-    ]);
+    expect(cases).toHaveLength(1);
+    expect(cases[0]?.id).toBe("orange-pi-first-boot");
+    expect(cases[0]?.domain).toBe("object");
   });
 
   it("能够按 ID 读取案例和节点", async () => {
@@ -92,10 +90,83 @@ describe("StaticGraphRepository", () => {
     });
   });
 
-  it("只为物体预置案例提供重建指南", async () => {
+  it("为当前 Orange Pi 案例提供打造指南", async () => {
     await expect(
       repository.getBuildGuide("orange-pi-first-boot"),
     ).resolves.not.toBeNull();
-    await expect(repository.getBuildGuide("leaf")).resolves.toBeNull();
+  });
+
+  it("局域网层保留地址与 SSH 服务汇入远程终端的真实关系", async () => {
+    const worldCase = await repository.getCase("orange-pi-first-boot");
+    const childrenOf = (parentId: string) =>
+      worldCase.nodes
+        .filter((node) => node.parentId === parentId)
+        .sort((left, right) => (left.index ?? 0) - (right.index ?? 0))
+        .map((node) => node.id);
+
+    expect(childrenOf("network-access")).toEqual([
+      "ethernet-router",
+      "dhcp-address",
+      "ssh-service",
+      "remote-shell",
+    ]);
+    expect(childrenOf("remote-shell")).toEqual([
+      "ssh-command",
+      "host-fingerprint",
+      "login-shell",
+    ]);
+
+    const networkEdges = worldCase.edges
+      .filter((edge) =>
+        [
+          "router-to-address",
+          "address-to-shell",
+          "ssh-to-shell",
+          "ssh-to-fingerprint",
+          "fingerprint-to-login",
+        ].includes(edge.id),
+      )
+      .map((edge) => [edge.source, edge.target]);
+
+    expect(networkEdges).toEqual([
+      ["ethernet-router", "dhcp-address"],
+      ["dhcp-address", "remote-shell"],
+      ["ssh-service", "remote-shell"],
+      ["ssh-command", "host-fingerprint"],
+      ["host-fingerprint", "login-shell"],
+    ]);
+  });
+
+  it("找 IP 与首次 SSH 教程包含主路线、备用分支和可核对输出", async () => {
+    const guide = await repository.getBuildGuide("orange-pi-first-boot");
+    expect(guide).not.toBeNull();
+
+    const findIndex =
+      guide?.steps.findIndex((step) => step.id === "find-ip") ?? -1;
+    const sshIndex =
+      guide?.steps.findIndex((step) => step.id === "first-ssh") ?? -1;
+    expect(findIndex).toBeGreaterThanOrEqual(0);
+    expect(sshIndex).toBe(findIndex + 1);
+
+    const findIp = guide!.steps[findIndex];
+    const firstSsh = guide!.steps[sshIndex];
+    const findText = JSON.stringify(findIp);
+    const sshText = JSON.stringify(firstSsh);
+
+    expect(findIp.deviceState).toBeTruthy();
+    expect(findIp.mentalModel).toContain("路由器");
+    expect(findText).toContain("ipconfig");
+    expect(findText).toContain("Test-NetConnection {{IP}} -Port 22");
+    expect(findText).toContain("hostname -I");
+    expect(findText).toContain("TcpTestSucceeded : True");
+
+    expect(firstSsh.deviceState).toBeTruthy();
+    expect(firstSsh.mentalModel).toContain("PowerShell");
+    expect(sshText).toContain("ssh -V");
+    expect(sshText).toContain("ssh root@{{IP}}");
+    expect(sshText).toContain("1234");
+    expect(sshText).toContain("ssh {{USER}}@{{IP}}");
+    expect(sshText).toContain("whoami");
+    expect(sshText).toContain("分支 B");
   });
 });

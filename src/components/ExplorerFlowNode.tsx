@@ -34,8 +34,9 @@ export function ExplorerFlowNode({
         type="target"
         position={isWorkflow ? Position.Left : Position.Top}
       />
-      <div className="network-node__point" aria-hidden="true">
-        <span />
+      <div className="network-node__point">
+        <span aria-hidden="true" />
+        <em>{graphNode.label}</em>
       </div>
       <strong>{graphNode.label}</strong>
       <Handle

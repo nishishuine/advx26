@@ -136,6 +136,13 @@ export type BuildStep = {
   phase: string;
   title: string;
   purpose: string;
+  deviceState?: string;
+  mentalModel?: string;
+  terminalExample?: {
+    title: string;
+    lines: string[];
+    note?: string;
+  };
   prerequisites: string[];
   instructions: string[];
   successCriteria: string[];

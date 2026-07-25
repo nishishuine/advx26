@@ -1,9 +1,9 @@
 {
   "caseId": "orange-pi-first-boot",
   "title": "从空白 TF 卡到第一张 Orange Pi 网页",
-  "summary": "只走一条默认成功路线：Windows + Armbian Imager + Orange Pi 3B 的 Debian Minimal 镜像 + 网线 + SSH + Nginx。每次只做一步，看到结果再继续。",
+  "summary": "只走一条默认成功路线：先在联网的 Windows 电脑准备系统，再用读卡器把系统烧录到 TF 卡；安全弹出后才把卡装进断电的 Orange Pi 3B，最后通过网线、SSH 和 Nginx 做出第一张网页。",
   "difficulty": "零基础可完成",
-  "totalTime": "约 45–90 分钟，下载速度不同会有差异",
+  "totalTime": "约 60–120 分钟，下载速度和首次排错时间会有差异",
   "budget": "已有 Orange Pi 3B 的情况下，只需要 TF 卡、读卡器、网线与合格电源",
   "tools": [
     "Windows 电脑",
@@ -13,10 +13,11 @@
     "Windows 浏览器"
   ],
   "programFlow": [
-    "备齐硬件",
-    "选择唯一镜像",
-    "写入 TF 卡",
-    "接线并启动",
+    "备齐并认识硬件",
+    "电脑下载烧录工具",
+    "只识别 TF 卡",
+    "烧录并安全弹出",
+    "断电装卡再启动",
     "找到 IP",
     "首次 SSH 登录",
     "确认系统",
@@ -37,7 +38,7 @@
       "name": "microSD / TF 卡",
       "quantity": "1 张",
       "purpose": "保存系统并作为启动盘",
-      "estimate": "至少 16GB、Class 10，推荐 32GB",
+      "estimate": "至少 16GB、Class 10，优先 A1 和可靠品牌；推荐 32GB",
       "status": "core"
     },
     {
@@ -103,16 +104,18 @@
     {
       "id": "prepare-kit",
       "phase": "准备",
-      "title": "把真正需要的东西放到桌面上",
-      "purpose": "先确认这条路线具备最基本的硬件条件，避免做到一半才发现缺卡、缺网线或供电不合格。",
+      "title": "先把 6 样东西放到桌面上",
+      "purpose": "先照着图片认清每一件东西。零基础最常见的卡点不是代码，而是缺读卡器、拿错卡槽或过早给主板通电。",
+      "deviceState": "TF 卡：未连接｜读卡器：未连接｜Orange Pi：完全断电｜电源：未连接",
       "prerequisites": [
         "Orange Pi 现在没有通电。",
         "Windows 电脑可以正常上网。",
         "你可以查看电源适配器的输出铭牌。"
       ],
       "instructions": [
-        "放好 Orange Pi 3B、至少 16GB 的 TF 卡、读卡器、网线、Type-C 电源与线材。",
+        "对照上方图片放好 6 样东西：Windows 电脑、Orange Pi 3B、至少 16GB 的 TF 卡、读卡器、网线、Type-C 电源与线材。",
         "确认板卡型号明确是 Orange Pi 3B，不是 Orange Pi 3、3 LTS、Zero 3 或其他相近型号。",
+        "拿起 TF 卡和读卡器：TF 卡是指甲大小的存储卡，读卡器是把这张小卡接到电脑 USB 口的转接设备。",
         "查看电源铭牌，确认它能提供稳定的 5V/3A Type-C 输出；不确定就先不要给板卡通电。",
         "确认 Windows 电脑和稍后要连接 Orange Pi 的路由器处在同一个局域网。",
         "这一阶段不要插电，也不要把 TF 卡插进正在通电的 Orange Pi。"
@@ -120,7 +123,7 @@
       "successCriteria": [
         "板卡型号已确认是 Orange Pi 3B。",
         "TF 卡、读卡器、网线和 5V/3A Type-C 电源都在手边。",
-        "Windows 可以打开路由器管理页面，或你知道如何查看已连接设备。"
+        "你能进入路由器的已连接设备页面，或已经准备 HDMI 显示器和 USB 键盘作为找 IP 的备用路线。"
       ],
       "troubleshooting": [
         "只有读卡器但没有 TF 卡：必须补一张至少 16GB 的 Class 10 TF 卡。",
@@ -132,19 +135,21 @@
     {
       "id": "choose-image",
       "phase": "准备系统",
-      "title": "锁定一个镜像和一个烧录工具",
-      "purpose": "Demo 不做多选题，默认使用 Armbian 官方推荐的 Imager 和 Orange Pi 3B 的 Debian Minimal 镜像。",
+      "title": "先在电脑下载烧录工具并选择系统",
+      "purpose": "这一整步只在 Windows 电脑上完成。下载的是烧录工具，之后由它把完整 Linux 系统写进 TF 卡，不是把安装包手动复制进卡。",
+      "deviceState": "TF 卡：仍未连接｜读卡器：仍未连接｜Orange Pi：完全断电｜电脑：联网并接通电源",
       "prerequisites": [
         "Windows 电脑已联网。",
         "当前使用的是 Orange Pi 3B。",
-        "电脑磁盘至少有 2GB 可用空间。"
+        "电脑磁盘至少有 4GB 可用空间，并且烧录期间不会休眠或合盖。"
       ],
       "instructions": [
         "打开 Orange Pi 3B 的 Armbian 官方板卡页：https://armbian.com/boards/orangepi3b 。",
         "点击页面上的 Download with Armbian Imager，下载并安装 Windows 版 Armbian Imager。",
         "打开 Armbian Imager，选择板卡 Orange Pi 3B。",
         "镜像选择 Debian 13 Trixie Minimal (CLI)；如果同时出现多个内核，优先选 vendor 6.1 的 Minimal 镜像。",
-        "再次核对界面里写的是 Orange Pi 3B 和 Minimal (CLI)，暂时不要点击最终写入。"
+        "再次核对界面里写的是 Orange Pi 3B 和 Minimal (CLI)，暂时不要点击最终写入。",
+        "保持电脑联网和接通电源；后面烧录时 Imager 可能继续下载镜像，期间不要让电脑休眠或合盖。"
       ],
       "successCriteria": [
         "Armbian Imager 已打开。",
@@ -159,23 +164,55 @@
       "duration": "10–30 分钟"
     },
     {
+      "id": "identify-card",
+      "phase": "连接 TF 卡",
+      "title": "只识别这张 TF 卡，先不要写入",
+      "purpose": "先让 Windows 看见 TF 卡并用容量把它认出来。把“认卡”和“清空写入”分开，能显著降低误选电脑硬盘或其他移动盘的风险。",
+      "deviceState": "TF 卡：插在读卡器里｜读卡器：连接电脑｜Orange Pi：完全断电且不连接任何东西",
+      "prerequisites": [
+        "TF 卡里的原有文件已经备份，因为下一步会清空整张卡。",
+        "你知道 TF 卡的标称容量，例如 32GB。",
+        "其他 U 盘、移动硬盘和不相关读卡器已经从电脑拔掉。"
+      ],
+      "instructions": [
+        "先把 TF 卡插进读卡器，确认小卡已插稳。",
+        "再把读卡器接到 Windows 电脑的 USB 口；不要把读卡器接到 Orange Pi。",
+        "等待 5–15 秒，让 Windows 出现一个新设备。",
+        "在 Armbian Imager 的目标设备列表里查看新出现的容量；32GB 卡通常显示约 29GB，这是正常的。",
+        "只确认哪一个设备是这张 TF 卡，先不要点击 Flash 或写入。",
+        "如果出现两个以上候选设备、容量完全对不上或你无法唯一确认，立即停止并拔下读卡器。"
+      ],
+      "successCriteria": [
+        "TF 卡已经插入读卡器，读卡器已经连接 Windows。",
+        "你能在 Imager 中唯一指出这张 TF 卡对应的目标设备。",
+        "目标设备显示容量与 TF 卡标称容量大致对应。"
+      ],
+      "troubleshooting": [
+        "Windows 完全没有新设备：换一个 USB 口，再重新插紧 TF 卡和读卡器。",
+        "32GB 只显示约 29GB：这是容量换算差异，属于正常情况。",
+        "出现两个候选磁盘：全部退出，只保留这一张 TF 卡后重新连接；仍不确定就不要继续。"
+      ],
+      "duration": "2–5 分钟"
+    },
+    {
       "id": "flash-card",
       "phase": "写入系统",
-      "title": "只把系统写进确认过的 TF 卡",
-      "purpose": "这是全流程唯一会清空存储设备的步骤。目标选对，后面的启动才有基础。",
+      "title": "把系统烧录到确认过的 TF 卡",
+      "purpose": "这是全流程唯一会清空存储设备的步骤。Imager 会下载并逐块写入完整系统，再做校验；它不是普通的文件复制。",
+      "deviceState": "TF 卡：仍在读卡器里｜读卡器：仍连接电脑｜Orange Pi：完全断电且不参与烧录",
       "prerequisites": [
         "TF 卡里的原有文件已经备份，允许整张卡被清空。",
-        "你知道 TF 卡标称容量，例如 32GB。",
+        "上一步已经唯一确认这张 TF 卡及其大致容量。",
         "Armbian Imager 已选好 Orange Pi 3B 的 Debian Minimal 镜像。"
       ],
       "instructions": [
-        "把 TF 卡插进读卡器，再把读卡器接到 Windows。",
-        "在 Armbian Imager 的目标设备中，只选择容量与手中 TF 卡一致的设备。",
-        "如果列表里有两个以上无法确定的移动磁盘，先全部退出，只重新插入这一张 TF 卡。",
-        "最后核对三项：板卡是 Orange Pi 3B、镜像是 Debian Minimal、目标容量等于 TF 卡容量。",
-        "确认无误后开始 Flash；等待写入和 Verify 都完成，中途不要拔读卡器。",
-        "如果 Windows 弹出“需要格式化磁盘”，选择取消；这是 Windows 不认识 Linux 分区，不代表失败。",
-        "在系统托盘安全弹出读卡器，再取出 TF 卡。"
+        "最后核对三项：板卡是 Orange Pi 3B、镜像是 Debian Minimal、目标设备是刚刚唯一确认的 TF 卡且容量大致对应。",
+        "确认无误后点击 Flash；保持电脑联网、接通电源，不要合盖或休眠。",
+        "写入或校验过程中如果 Windows 弹出“需要格式化磁盘”，一律选择取消；这是 Windows 不认识 Linux 分区，不代表失败。",
+        "等待 Flash 和 Verify 都明确成功，中途不要拔读卡器，也不要操作 Orange Pi。",
+        "关闭 Armbian Imager。",
+        "从 Windows 系统托盘选择安全弹出读卡器，看到可以安全移除后再拔下读卡器。",
+        "最后才从读卡器中取出 TF 卡。"
       ],
       "successCriteria": [
         "Imager 明确显示写入完成。",
@@ -192,18 +229,20 @@
     {
       "id": "first-boot",
       "phase": "启动",
-      "title": "按顺序接线并完成第一次启动",
-      "purpose": "让主板从 TF 卡启动，并通过网线自动从路由器获得一个 IP 地址。",
+      "title": "安全弹出后，断电装卡再启动",
+      "purpose": "烧录在电脑端已经结束。现在才把 TF 卡从读卡器移到 Orange Pi，让主板从卡启动，并通过网线获得 IP 地址。",
+      "deviceState": "TF 卡：已离开读卡器并准备装板｜读卡器：已拔下｜Orange Pi：完全断电｜电源：最后才连接",
       "prerequisites": [
-        "TF 卡已完成写入和校验。",
+        "TF 卡已完成 Flash、Verify 和 Windows 安全弹出。",
         "Orange Pi 完全断电。",
         "网线另一端已接入正在工作的路由器。"
       ],
       "instructions": [
-        "在断电状态下，把写好的 TF 卡插到底。",
-        "把网线接到 Orange Pi 和路由器。",
-        "有 HDMI 显示器时可以现在接上；没有也可以继续。",
-        "最后才接 Type-C 5V/3A 电源。",
+        "确认 TF 卡已经离开读卡器，Orange Pi 上没有连接 Type-C 电源。",
+        "翻到主板背面，找到右侧边缘的 TF 卡槽；按卡槽方向轻推到位，遇到明显阻力立即停止，不要硬插。",
+        "把网线一端接 Orange Pi，另一端接路由器的 LAN 口，不要接标有 WAN 或 Internet 的口。",
+        "需要用 HDMI 显示器和 USB 键盘作为备用排错时，现在接上；没有也可以继续。",
+        "最后才连接稳定的 Type-C 5V/3A 电源。",
         "等待至少 2 分钟。第一次启动要扩展文件系统，不要因为暂时没反应而反复拔电。"
       ],
       "successCriteria": [
@@ -221,68 +260,113 @@
     {
       "id": "find-ip",
       "phase": "连接",
-      "title": "从路由器找到 Orange Pi 的 IP",
-      "purpose": "IP 是 Windows 找到这块板卡的地址。把它记在页面里，后续命令会自动带入。",
+      "title": "确认在同一局域网，再找到 Orange Pi 的 IP",
+      "purpose": "先找到路由器，再从路由器找到 Orange Pi。最终只需要保存一串四组数字组成的局域网 IPv4，后面的 SSH 命令会自动带入。",
+      "deviceState": "TF 卡：装在 Orange Pi 内｜Orange Pi：保持通电｜网线：连接路由器 LAN 口｜电脑：连接同一路由器",
+      "mentalModel": "路由器像前台，电脑和 Orange Pi 都是住客。路由器会给每台设备分配一个局域网 IP，SSH 需要用这个 IP 找到 Orange Pi。电脑可以走 Wi-Fi，Orange Pi 走网线；只要连接的是同一个普通家庭网络即可，不要求两者直接相连。",
+      "terminalExample": {
+        "title": "PowerShell 里关键输出长这样",
+        "lines": [
+          "PS C:\\Users\\你> ipconfig",
+          "IPv4 地址 . . . . . . . . . . . : 192.168.1.20",
+          "默认网关. . . . . . . . . . . . : 192.168.1.1",
+          "PS C:\\Users\\你> Test-NetConnection {{IP}} -Port 22",
+          "RemotePort       : 22",
+          "TcpTestSucceeded : True"
+        ],
+        "note": "只要最后的 TcpTestSucceeded 是 True 就可以继续；PingSucceeded 即使是 False 也不影响本教程。"
+      },
       "prerequisites": [
         "Orange Pi 已通过网线接入路由器并启动至少 2 分钟。",
-        "Windows 与 Orange Pi 使用同一个路由器。",
-        "你可以进入路由器的“已连接设备”或“DHCP 客户端”页面。"
+        "Windows 已连接同一个路由器的普通 Wi-Fi 或 LAN；不要使用会隔离设备的访客 Wi-Fi。",
+        "优先使用路由器的“已连接设备”页面；无法进入时必须准备 HDMI 显示器和 USB 键盘走备用路线。"
       ],
       "instructions": [
-        "进入路由器管理页面，打开已连接设备、在线终端或 DHCP 客户端列表。",
-        "寻找名为 orangepi、armbian、debian 的新设备；没有名称时，找刚刚出现的有线设备。",
-        "记下它的 IPv4 地址，例如 192.168.1.123，并填入本页上方的设备 IP 输入框。",
-        "在 Windows PowerShell 运行 `Test-NetConnection {{IP}} -Port 22`。",
-        "看到 TcpTestSucceeded : True 后再进入下一步。"
+        "在 Windows 按一下 Windows 键，输入 PowerShell，打开“Windows PowerShell”或“终端（PowerShell）”；窗口应出现类似 PS C:\\Users\\你的名字> 的提示符。",
+        "在 PowerShell 运行 `ipconfig`。只看当前正在使用的“无线局域网适配器 Wi-Fi”或“以太网适配器”，记下其中的“默认网关”，例如 192.168.1.1；这是路由器地址，不是 Orange Pi 地址。",
+        "在 Windows 浏览器地址栏输入默认网关，例如 http://192.168.1.1，并使用路由器标签、说明书或管理 App 提供的账号进入后台；不要因为忘记密码就重置路由器。",
+        "打开“已连接设备”“在线终端”“LAN 客户端”或“DHCP 客户端”列表，寻找名为 orangepi、armbian、debian 的新有线设备；没有名称时，找刚刚新增的有线设备。",
+        "只复制该设备的 IPv4，例如 192.168.1.123、10.0.0.25 或 172.16.0.8。不要复制带冒号的 MAC 地址，不要复制以 fe80:: 开头的 IPv6。",
+        "把 IPv4 填入上方 Orange Pi IP 输入框。这里只填数字和点，不带 http://、端口、斜杠或空格。",
+        "在 PowerShell 运行 `Test-NetConnection {{IP}} -Port 22`；它可能等待几秒，只看最后一行 TcpTestSucceeded。",
+        "看到 TcpTestSucceeded : True，说明 Windows 已经能找到 Orange Pi 的 SSH 服务，可以进入下一步。",
+        "备用路线 B（只有进不了路由器后台时使用）：先断电，接好 HDMI 显示器与 USB 键盘，再上电；按屏幕提示完成本地首次设置，登录后运行 `hostname -I`，把第一串局域网 IPv4 填到上方。",
+        "如果走了备用路线 B，记住你已经创建的普通用户名；下一步直接使用该用户登录，不要再次使用 root 和默认密码 1234。"
       ],
       "successCriteria": [
-        "已经在本页保存一个形如 192.168.x.x 或 10.x.x.x 的局域网 IP。",
-        "路由器列表显示这个设备当前在线。",
+        "已经通过路由器列表或 `hostname -I` 得到一个合法局域网 IPv4，并正确填入本页。",
+        "你能区分 Orange Pi 的 IPv4、路由器默认网关和 MAC 地址。",
         "`Test-NetConnection {{IP}} -Port 22` 返回 TcpTestSucceeded : True。"
       ],
       "troubleshooting": [
-        "设备列表没有新设备：再等 2 分钟并刷新；同时检查网线两端和网口灯。",
-        "能看到 IP 但 22 端口不通：确认镜像写入成功，并给首次启动更多时间。",
-        "仍找不到 IP：接 HDMI 和 USB 键盘，登录后运行 `hostname -I` 查看地址。"
+        "ipconfig 看不到默认网关：Windows 还没有正确连上路由器，先修复电脑的 Wi-Fi 或网线连接。",
+        "设备列表没有新设备：再等 2–3 分钟并刷新；检查 Orange Pi 与路由器 LAN 口两端的网线和网口灯。",
+        "Windows 使用访客 Wi-Fi：部分路由器会隔离访客设备，切换到正常家庭 Wi-Fi 后重试。",
+        "IP 输入框提示格式不对：删除 http://、:22、斜杠和空格，只保留类似 192.168.1.123 的四组数字。",
+        "TcpTestSucceeded 为 False：等 60 秒再测一次；仍失败时复查 IP、网线、板卡启动状态和烧录结果。",
+        "没有路由器管理密码：不要重置路由器；改走 HDMI 显示器和 USB 键盘备用路线。"
       ],
-      "duration": "5–10 分钟"
+      "duration": "10–20 分钟"
     },
     {
       "id": "first-ssh",
       "phase": "连接",
-      "title": "第一次 SSH 登录并创建自己的用户",
-      "purpose": "先按 Armbian 的首次登录规则进入系统，再创建一个日常使用的普通用户。",
+      "title": "第一次用 SSH 远程登录，并确认登录成功",
+      "purpose": "SSH 就像把 Orange Pi 的键盘和屏幕搬到 Windows 的 PowerShell 里。先确认 Windows 有 SSH，再根据是否走过 HDMI 备用路线选择正确登录分支。",
+      "deviceState": "Orange Pi：保持通电联网｜电脑：只通过局域网远程连接｜不要移动 TF 卡或拔电",
+      "mentalModel": "在 PowerShell 的 PS C:\\Users\\…> 后输入的是 Windows 命令；登录成功后，提示符会变成 root@orangepi…# 或 你的用户名@orangepi…$，从这一刻起输入的命令才是在 Orange Pi 上执行。密码输入时屏幕完全不显示字符或星号，这是正常的安全设计。",
+      "terminalExample": {
+        "title": "第一次 SSH 登录的屏幕变化",
+        "lines": [
+          "PS C:\\Users\\你> ssh root@{{IP}}",
+          "Are you sure you want to continue connecting (yes/no)? yes",
+          "root@{{IP}}'s password:",
+          "root@orangepi3b:~# exit",
+          "PS C:\\Users\\你> ssh {{USER}}@{{IP}}",
+          "{{USER}}@orangepi3b:~$ whoami",
+          "{{USER}}"
+        ],
+        "note": "如果你已在 HDMI 屏幕上完成首次设置，就直接从 ssh 普通用户名@IP 这一行开始，不再使用 root / 1234。"
+      },
       "prerequisites": [
-        "设备 IP 已保存。",
-        "22 端口测试成功。",
-        "你已想好一个只含小写字母和数字的用户名，并填入上方输入框。"
+        "上一步已经保存合法的 Orange Pi IPv4，且 22 端口测试为 True。",
+        "你知道自己属于分支 A（从未完成首次设置）还是分支 B（已在 HDMI 上完成首次设置）。",
+        "普通用户名以小写字母开头，后面只使用小写字母和数字，例如 jie1，并已填入上方输入框。"
       ],
       "instructions": [
-        "在 Windows PowerShell 运行 `ssh root@{{IP}}`。",
-        "第一次出现主机指纹询问时，确认 IP 正确后输入 `yes`。",
-        "首次密码输入 `1234`；输入密码时终端不显示字符，这是正常现象。",
-        "按照屏幕提示先设置新的 root 密码。",
-        "系统要求创建普通用户时，输入你在上方保存的用户名 {{USER}}，再设置该用户密码。",
-        "完成首次设置后运行 `exit` 退出，然后用 `ssh {{USER}}@{{IP}}` 重新登录。"
+        "确认仍在 Windows PowerShell，运行 `ssh -V`；看到 OpenSSH_for_Windows 和版本号说明客户端可用。",
+        "分支 A（从未在 HDMI 上完成首次设置）：运行 `ssh root@{{IP}}`。第一次出现 Are you sure you want to continue connecting 时，核对显示的 IP 正确，然后输入 yes 并回车。",
+        "分支 A：出现 root@IP's password: 后输入默认密码 1234 并回车。密码输入时屏幕没有任何字符或星号，这是正常的；只输入一次。",
+        "分支 A：按提示输入新的 root 密码并重复一次。首次设置可能按美式 QWERTY 键盘布局解释，先使用不少于 10 位、包含字母和数字且不易按错的密码。",
+        "分支 A：需要创建普通用户时输入 {{USER}}，设置该用户密码并重复一次；shell 选择 Bash，再完成姓名、语言或时区等提示，直到看到类似 root@orangepi3b:~# 的提示符。",
+        "分支 A：运行 `exit`，确认提示符回到 Windows 的 PS C:\\Users\\…>。然后运行 `ssh {{USER}}@{{IP}}`，使用刚创建的普通用户密码登录。",
+        "分支 B（已经通过 HDMI 完成首次设置）：跳过 root、1234 和创建用户，直接运行 `ssh {{USER}}@{{IP}}`，输入你在 HDMI 设置时创建的普通用户密码。",
+        "普通用户登录成功后运行 `whoami`；正常只输出 {{USER}}。再运行 `hostname` 和 `hostname -I`，确认设备名与 IP 都属于这块 Orange Pi。",
+        "看到 {{USER}}@orangepi…$ 这类以美元符号结尾的提示符后再进入下一步；不要在 root 的 # 提示符里继续日常操作。"
       ],
       "successCriteria": [
-        "默认密码 1234 已被新密码替换。",
-        "普通用户 {{USER}} 已创建。",
-        "`ssh {{USER}}@{{IP}}` 能进入 Orange Pi 的命令行。"
+        "`ssh -V` 能显示 OpenSSH_for_Windows 版本。",
+        "分支 A 已替换默认密码并创建普通用户；或分支 B 已使用 HDMI 创建的普通用户。",
+        "`ssh {{USER}}@{{IP}}` 能进入命令行，且 `whoami` 只输出 {{USER}}。",
+        "`hostname -I` 显示的地址包含本页保存的 {{IP}}。"
       ],
       "troubleshooting": [
-        "提示 Connection timed out：IP、网线或路由器连接有问题，返回上一步复查。",
-        "提示 Connection refused：系统已在线但 SSH 还没就绪，再等 1 分钟后重试。",
-        "密码输入没有任何显示：这是 SSH 的正常安全设计，输完按回车即可。",
-        "反复提示密码错误：不要盲试，确认这是首次登录且用户名是 root、密码是 1234。"
+        "ssh -V 提示找不到命令：打开 Windows 设置 → 应用 → 可选功能，安装 OpenSSH 客户端，再关闭并重新打开 PowerShell。",
+        "提示 Connection timed out：回到上一步复查 IP、网线、板卡是否在线，以及 Windows 是否处于访客 Wi-Fi。",
+        "提示 Connection refused：系统已在线但 SSH 尚未就绪，再等 1–2 分钟重试；持续失败则复查镜像与启动。",
+        "提示 Permission denied：已走 HDMI 分支就使用普通用户名和你创建的密码；全新首次登录才使用 root / 1234。连续失败三次就停止核对，不要盲试。",
+        "密码输入没有显示：这是正常现象，不要重复粘贴；准确输入一次后按回车。",
+        "提示 REMOTE HOST IDENTIFICATION HAS CHANGED：只有确认这块板刚被你重新烧录过，才运行 `ssh-keygen -R {{IP}}` 删除旧指纹，然后重新连接。",
+        "首次设置里符号位置不对：键盘可能按美式 QWERTY 布局解释，先使用字母和数字组成的密码，完成后再修改。"
       ],
-      "duration": "5–10 分钟"
+      "duration": "10–20 分钟"
     },
     {
       "id": "verify-system",
       "phase": "确认系统",
       "title": "确认系统、存储和网络都正常",
       "purpose": "用少量只读命令确认你登录的是正确设备，并刷新软件包列表，为安装 Nginx 做准备。",
+      "deviceState": "Orange Pi：持续通电联网｜PowerShell：已登录普通用户｜浏览器：暂时不用",
       "prerequisites": [
         "当前 PowerShell 已通过 SSH 登录为普通用户 {{USER}}。",
         "Orange Pi 保持稳定供电和联网。",
@@ -299,7 +383,7 @@
         "`cat /etc/os-release` 显示 Debian 或 Armbian 信息。",
         "`hostname -I` 包含刚刚保存的 {{IP}}。",
         "`df -h /` 和 `free -h` 能正常显示存储与内存。",
-        "`sudo apt update` 完成且没有红色错误。"
+        "`sudo apt update` 返回命令提示符，且没有以 E: 开头的错误。"
       ],
       "troubleshooting": [
         "sudo 提示用户不在 sudoers：首次创建用户没有完成，重新从 root 首次登录流程检查。",
@@ -313,6 +397,7 @@
       "phase": "发布网页",
       "title": "安装 Nginx 并写入第一张网页",
       "purpose": "让 Orange Pi 真正对局域网提供一个网页，而不是只停留在“能登录”。",
+      "deviceState": "Orange Pi：持续通电联网｜PowerShell：仍在 SSH 会话｜Windows 浏览器：下一步使用",
       "prerequisites": [
         "`sudo apt update` 已成功完成。",
         "当前仍在 Orange Pi 的 SSH 终端中。",
@@ -342,6 +427,7 @@
       "phase": "完成",
       "title": "在 Windows 浏览器完成最终验收",
       "purpose": "从另一台设备访问网页，证明 TF 卡、启动、网络、SSH、Linux 和 Nginx 这条链路已经全部跑通。",
+      "deviceState": "Orange Pi：保持通电联网｜Windows：浏览器访问板卡 IP｜验收后再决定是否关机",
       "prerequisites": [
         "Nginx 状态为 active。",
         "Windows 与 Orange Pi 仍在同一局域网。",
@@ -351,7 +437,7 @@
         "在 Windows 浏览器打开 http://{{IP}} 。",
         "确认页面标题或正文出现“Orange Pi 3B 已成功运行”。",
         "回到 PowerShell，再运行一次 `ssh {{USER}}@{{IP}}`，确认重连仍然正常。",
-        "如果现在要关机，在 SSH 中运行 `sudo poweroff`，等待指示灯停止活动后再拔 Type-C 电源。"
+        "如果现在要关机，在 SSH 中运行 `sudo poweroff`，等待约 20–30 秒并确认活动灯停止变化后再拔 Type-C 电源；有些板卡的电源灯仍会亮，这是正常的。"
       ],
       "successCriteria": [
         "Windows 浏览器能打开 http://{{IP}} 。",

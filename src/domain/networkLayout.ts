@@ -31,7 +31,7 @@ function hashString(value: string): number {
 }
 
 /**
- * 为每层不超过 8 个节点生成稳定、可复现的小型力导向布局。
+ * 为当前层节点生成稳定、可复现的小型力导向布局。
  * 它不依赖随机数，因此切换详情或刷新页面时节点不会跳动。
  */
 export function createNetworkLayout(

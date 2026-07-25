@@ -1,6 +1,6 @@
-# 8bit — 拆开世界，再重建
+# manifold — 拆开世界，再重建
 
-AdventureX 2026 的静态交互 MVP。它把现实对象拆成每层最多 8 个有意义的单元，并用关系图展示结构、信号、能量或物质如何流动。当前版本完全由本地 JSON 驱动，不接入 AI、后端和数据库。
+AdventureX 2026 的静态交互 MVP。它按照理解目标把现实对象拆成所需的有意义单元，不设固定数量上限，并用关系图展示结构、信号、能量或物质如何流动。当前版本完全由本地 JSON 驱动，不接入 AI、后端和数据库。
 
 ## 本地运行
 
@@ -26,7 +26,7 @@ npm run build
 
 案例、当前层和关系视图都写入 URL，刷新后可以恢复。
 
-当前仍是静态 MVP：包含“叶片、植物、光合”等关键词的输入会进入叶片案例，其余输入进入 Orange Pi 3B 首次启动案例；图片只在浏览器本地预览，不执行真实识图。
+当前仍是静态 MVP：所有输入都会进入 Orange Pi 3B 案例；图片只在浏览器本地预览，不执行真实识图。
 
 ## 项目结构
 
@@ -34,12 +34,12 @@ npm run build
 src/
 ├─ components/           通用 UI、关系图节点和详情栏
 ├─ data/
-│  ├─ cases/             Orange Pi 3B、叶片静态案例
+│  ├─ cases/             Orange Pi 3B 静态案例
 │  └─ build-guides/      Orange Pi 3B 首次启动指南
 ├─ domain/
 │  ├─ types.ts           数据类型
 │  ├─ relations.ts       物体/生命关系白名单和视图
-│  ├─ graph.ts           8 节点上限与数据校验
+│  ├─ graph.ts           层级、关系与数据校验
 │  └─ repository.ts      可替换的静态仓库实现
 ├─ pages/                首页、探索页、重建页
 └─ store/                临时界面状态
@@ -63,15 +63,15 @@ type WorldCase = {
 
 每个节点必须记录父级、层级、功能、资料状态和来源。每条边必须具有合法 `relation`、非空 `explanation` 以及所属 `views`。领域层会在以下情况立即报错：
 
-- 任一父节点拥有超过 8 个直接子节点；
-- 物体或生命案例使用了其关系白名单之外的类型；
+- 节点父级、层级或可展开状态与实际结构不一致；
+- 案例使用了关系白名单之外的类型；
 - 边引用不存在的节点或缺少解释；
 - 重建步骤缺少前置条件、验收标准或排错路径。
 
 ## 新增案例
 
 1. 在 `src/data/cases/` 新建符合 `WorldCase` 的 JSON。
-2. 确保同一父节点的直接子节点不超过 8 个。
+2. 按当前理解目标组织直接子节点，不设固定数量上限。
 3. 在 `src/domain/repository.ts` 导入 JSON 并加入 `worldCases`。
 4. 如为安全、人工整理的物体案例，可在 `src/data/build-guides/` 增加 `BuildGuide` 并加入 `guides`。
 5. 运行 `npm run test && npm run build`。

@@ -13,7 +13,7 @@ import {
   type NodeMouseHandler,
 } from "@xyflow/react";
 import {
-  ChevronDown,
+  ArrowRight,
   ChevronRight,
   CircleHelp,
   Home,
@@ -28,6 +28,7 @@ import { NodeInspector } from "../components/NodeInspector";
 import { PageLoader } from "../components/PageLoader";
 import { SimpleEdgeInspector } from "../components/SimpleEdgeInspector";
 import { SimpleNodeInspector } from "../components/SimpleNodeInspector";
+import { TutorialVisualGallery } from "../components/TutorialVisualGallery";
 import {
   getBreadcrumbs,
   getChildren,
@@ -44,12 +45,8 @@ import {
   getViewsForDomain,
 } from "../domain/relations";
 import { graphRepository } from "../domain/repository";
-import type {
-  CaseSummary,
-  GraphEdge,
-  ViewType,
-  WorldCase,
-} from "../domain/types";
+import { orangePiOverviewVisuals } from "../domain/orangePiVisuals";
+import type { GraphEdge, ViewType, WorldCase } from "../domain/types";
 
 const nodeTypes = { explorer: ExplorerFlowNode };
 
@@ -68,17 +65,26 @@ function layoutNodes(
   edges: GraphEdge[],
   selectedNodeId: string | null,
   selectedEdge: { source: string; target: string } | null,
+  useMapStyle = false,
 ): ExplorerNode[] {
   const layoutMode = resolveLayoutMode(worldCase.layout);
   const positions = createCaseLayout(layoutMode, children, edges);
+  const mapY = [175, 440, 255, 500, 185, 390, 135, 460];
 
-  return children.map((graphNode) => {
-    const point = positions.get(graphNode.id) ?? { x: 520, y: 305 };
+  return children.map((graphNode, index) => {
+    const point = useMapStyle
+      ? children.length === 1
+        ? { x: 540, y: 330 }
+        : {
+            x: 130 + (index / (children.length - 1)) * 820,
+            y: mapY[index % mapY.length],
+          }
+      : (positions.get(graphNode.id) ?? { x: 520, y: 305 });
 
     return {
       id: graphNode.id,
       type: "explorer",
-      position: { x: point.x - 66, y: point.y - 24 },
+      position: { x: point.x - 66, y: point.y - (useMapStyle ? 48 : 24) },
       selected: graphNode.id === selectedNodeId,
       data: {
         graphNode,
@@ -98,7 +104,6 @@ export function ExplorerPage() {
   const { caseId = "", nodeId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [worldCase, setWorldCase] = useState<WorldCase | null>(null);
-  const [cases, setCases] = useState<CaseSummary[]>([]);
   const [error, setError] = useState("");
 
   const rawView = searchParams.get("view") as ViewType | null;
@@ -121,14 +126,11 @@ export function ExplorerPage() {
     setWorldCase(null);
     setError("");
 
-    Promise.all([
-      graphRepository.getCase(caseId),
-      graphRepository.listCases(),
-    ])
-      .then(([loadedCase, summaries]) => {
+    graphRepository
+      .getCase(caseId)
+      .then((loadedCase) => {
         if (!alive) return;
         setWorldCase(loadedCase);
-        setCases(summaries);
       })
       .catch((reason: unknown) => {
         if (!alive) return;
@@ -231,11 +233,13 @@ export function ExplorerPage() {
             layoutEdges,
             visibleSelectedNodeId,
             selectedDisplayEdge,
+            isSimpleExplore,
           )
         : [],
     [
       currentNode,
       children,
+      isSimpleExplore,
       layoutEdges,
       selectedDisplayEdge,
       visibleSelectedNodeId,
@@ -260,7 +264,11 @@ export function ExplorerPage() {
               ? "如何接上"
               : edge.displayLabel
             : undefined,
-          type: isWorkflow ? "smoothstep" : "straight",
+          type: isSimpleExplore
+            ? "default"
+            : isWorkflow
+              ? "smoothstep"
+              : "straight",
           selected: isSelected,
           data: { graphEdges: edge.members },
           animated: false,
@@ -268,15 +276,27 @@ export function ExplorerPage() {
           markerEnd: isWorkflow || isSelected
             ? {
                 type: MarkerType.ArrowClosed,
-                color: isSelected ? "#0071e3" : "#8e8e93",
+                color: isSelected
+                  ? isSimpleExplore
+                    ? "#2f7f88"
+                    : "#0071e3"
+                  : isSimpleExplore
+                    ? "#8eafb2"
+                    : "#8e8e93",
                 width: isSelected ? 9 : 8,
                 height: isSelected ? 9 : 8,
               }
             : undefined,
           style: {
-            stroke: isSelected ? "#0071e3" : "#a8a8ad",
-            strokeWidth: isSelected ? 1.8 : 0.9,
-            opacity: isSelected ? 1 : isWorkflow ? 0.72 : 0.58,
+            stroke: isSelected
+              ? isSimpleExplore
+                ? "#2f7f88"
+                : "#0071e3"
+              : isSimpleExplore
+                ? "#a8bec0"
+                : "#a8a8ad",
+            strokeWidth: isSelected ? 1.8 : isSimpleExplore ? 1.2 : 0.9,
+            opacity: isSelected ? 1 : isSimpleExplore ? 0.82 : isWorkflow ? 0.72 : 0.58,
             strokeDasharray: isSupportingPath ? "5 5" : undefined,
           },
           labelStyle: {
@@ -380,30 +400,23 @@ export function ExplorerPage() {
     >
       <header className="explorer-header">
         <Link className="explorer-wordmark" to="/">
-          8bit
+          manifold
         </Link>
-        <label className="case-switcher">
+        <div className="case-switcher case-switcher--single">
           <span
             className="case-switcher__dot"
             style={{ backgroundColor: worldCase.accent }}
           />
-          <select
-            value={worldCase.id}
-            onChange={(event) =>
-              navigate(
-                `/explore/${event.target.value}?view=structure&goal=learn`,
-              )
-            }
-            aria-label="切换案例"
-          >
-            {cases.map((summary) => (
-              <option value={summary.id} key={summary.id}>
-                {summary.shortTitle}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={14} />
-        </label>
+          <strong>{worldCase.shortTitle}</strong>
+        </div>
+        <span className="build-flow-header__mode">拆开</span>
+        <Link
+          className="build-flow-header__switch"
+          to={`/rebuild/${worldCase.id}`}
+        >
+          开始打造
+          <ArrowRight size={14} />
+        </Link>
       </header>
 
       <section className="explorer-toolbar">
@@ -594,6 +607,12 @@ export function ExplorerPage() {
                 ? "点小圆点了解它负责什么；点连线了解前后两个部分如何接上。"
                 : "点击节点查看它的作用与上下游；点击两个节点之间的连线，拆开理解它们如何发生联系。"}
             </p>
+            {isSimpleExplore && (
+              <TutorialVisualGallery
+                visuals={orangePiOverviewVisuals}
+                compact
+              />
+            )}
           </aside>
         )}
       </div>

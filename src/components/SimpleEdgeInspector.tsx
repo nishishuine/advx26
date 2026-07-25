@@ -1,5 +1,7 @@
 import { ArrowRight, X } from "lucide-react";
 import type { GraphEdge, WorldCase } from "../domain/types";
+import { getOrangePiEdgeVisuals } from "../domain/orangePiVisuals";
+import { TutorialVisualGallery } from "./TutorialVisualGallery";
 
 type SimpleEdgeInspectorProps = {
   label: string;
@@ -43,6 +45,13 @@ export function SimpleEdgeInspector({
         <ArrowRight size={20} aria-hidden="true" />
         <strong>{targetNode?.label ?? "终点"}</strong>
       </div>
+
+      {worldCase.id === "orange-pi-first-boot" && (
+        <TutorialVisualGallery
+          visuals={getOrangePiEdgeVisuals(sourceId, targetId)}
+          compact
+        />
+      )}
 
       <section className="simple-inspector__section">
         <h2>{relationTitle}</h2>

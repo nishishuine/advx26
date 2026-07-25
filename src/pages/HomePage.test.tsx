@@ -58,7 +58,7 @@ describe("HomePage conversation entry", () => {
     renderHome();
 
     expect(
-      screen.getByRole("heading", { name: "你想弄懂什么？" }),
+      screen.getByRole("heading", { name: "你要做些什么" }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "上传图片" })).toBeTruthy();
     expect(
@@ -75,6 +75,9 @@ describe("HomePage conversation entry", () => {
     ).toBe("false");
     expect(screen.queryByText("LOCAL MVP")).toBeNull();
     expect(screen.queryByText(/静态关系数据/)).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "manifold 首页" }),
+    ).toBeTruthy();
   });
 
   it("默认选择拆开，提交后进入物体关系图", () => {
@@ -122,24 +125,11 @@ describe("HomePage conversation entry", () => {
     ).toBeTruthy();
   });
 
-  it("识别叶片相关描述并进入生命案例", () => {
-    renderHome();
-    fireEvent.change(screen.getByLabelText("描述想要拆解的对象"), {
-      target: { value: "叶片如何完成光合作用？" },
-    });
-    fireEvent.click(
-      screen.getByRole("button", { name: "确认并生成关系图" }),
-    );
-
-    act(() => vi.advanceTimersByTime(600));
-    expect(screen.getByText("case:leaf;from:conversation")).toBeTruthy();
-  });
-
   it("中文输入法组词时按下回车不会误提交", () => {
     renderHome();
     const input = screen.getByLabelText("描述想要拆解的对象");
     fireEvent.change(input, {
-      target: { value: "叶片如何交换气体？" },
+      target: { value: "Orange Pi 如何连接网络？" },
     });
 
     fireEvent.keyDown(input, {
@@ -149,6 +139,10 @@ describe("HomePage conversation entry", () => {
     });
     act(() => vi.advanceTimersByTime(600));
 
-    expect(screen.queryByText("case:leaf;from:conversation")).toBeNull();
+    expect(
+      screen.queryByText(
+        "case:orange-pi-first-boot;from:conversation",
+      ),
+    ).toBeNull();
   });
 });

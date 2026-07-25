@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   getCollapsedEdgesForLayer,
-  GraphValidationError,
   validateBuildGuide,
   validateWorldCase,
 } from "./graph";
@@ -68,26 +67,27 @@ const createCase = (): WorldCase => ({
 });
 
 describe("validateWorldCase", () => {
-  it("接受每层不超过 8 个节点的有效案例", () => {
+  it("接受结构有效的案例", () => {
     expect(validateWorldCase(createCase()).id).toBe("test-case");
   });
 
-  it("父节点拥有超过 8 个子节点时抛出错误", () => {
+  it("按理解所需接受九个同级节点，不恢复固定数量上限", () => {
     const worldCase = createCase();
-    worldCase.nodes = [
-      root,
-      ...Array.from({ length: 9 }, (_, index) => ({
+    worldCase.nodes.push(
+      ...Array.from({ length: 7 }, (_, index) => ({
         ...root,
-        id: `child-${index}`,
+        id: `extra-child-${index + 1}`,
         parentId: "root",
-        label: `节点 ${index}`,
+        label: `扩展节点 ${index + 1}`,
         level: 1,
         canExpand: false,
       })),
-    ];
+    );
 
-    expect(() => validateWorldCase(worldCase)).toThrow(GraphValidationError);
-    expect(() => validateWorldCase(worldCase)).toThrow("超过 8 个上限");
+    expect(
+      worldCase.nodes.filter((node) => node.parentId === "root"),
+    ).toHaveLength(9);
+    expect(validateWorldCase(worldCase).id).toBe("test-case");
   });
 
   it("拒绝不属于物体领域的关系类型", () => {

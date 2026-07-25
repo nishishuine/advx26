@@ -51,17 +51,6 @@ type SpeechRecognitionLike = {
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
-const LIFE_KEYWORDS = [
-  "叶",
-  "植物",
-  "花",
-  "树",
-  "光合",
-  "气孔",
-  "leaf",
-  "plant",
-];
-
 export function HomePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -197,10 +186,7 @@ export function HomePage() {
         : "正在整理主要部分与关系…",
     );
 
-    const input = `${prompt} ${attachment?.file.name ?? ""}`.toLowerCase();
-    const caseId = LIFE_KEYWORDS.some((keyword) => input.includes(keyword))
-      ? "leaf"
-      : "orange-pi-first-boot";
+    const caseId = "orange-pi-first-boot";
     const params = new URLSearchParams({ from: "conversation" });
     if (prompt.trim()) params.set("q", prompt.trim().slice(0, 120));
 
@@ -245,8 +231,12 @@ export function HomePage() {
   return (
     <main className="chat-home">
       <header className="chat-home__header">
-        <Link className="chat-home__wordmark" to="/" aria-label="8bit 首页">
-          8bit
+        <Link
+          className="chat-home__wordmark"
+          to="/"
+          aria-label="manifold 首页"
+        >
+          manifold
         </Link>
       </header>
 
@@ -257,8 +247,8 @@ export function HomePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h1>你想弄懂什么？</h1>
-          <p>描述一个对象，再选择理解它或亲手做出来。</p>
+          <h1>你要做些什么</h1>
+          <p>描述你的目标，从理解到亲手实现。</p>
         </motion.div>
 
         <motion.div

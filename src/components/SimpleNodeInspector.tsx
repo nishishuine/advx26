@@ -1,5 +1,7 @@
 import { ArrowRight, Boxes, X } from "lucide-react";
 import type { GraphNode, WorldCase } from "../domain/types";
+import { getOrangePiNodeVisuals } from "../domain/orangePiVisuals";
+import { TutorialVisualGallery } from "./TutorialVisualGallery";
 
 type SimpleNodeInspectorProps = {
   node: GraphNode;
@@ -42,6 +44,13 @@ export function SimpleNodeInspector({
         <h2>{node.label}</h2>
         <p>{node.summary}</p>
       </header>
+
+      {worldCase.id === "orange-pi-first-boot" && (
+        <TutorialVisualGallery
+          visuals={getOrangePiNodeVisuals(node.id)}
+          compact
+        />
+      )}
 
       <section className="simple-inspector__section">
         <h3>它负责什么</h3>

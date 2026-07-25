@@ -1,5 +1,4 @@
 import orangePiFirstBoot from "../data/cases/orange-pi-first-boot.json";
-import leaf from "../data/cases/leaf.json";
 import orangePiFirstBootGuide from "../data/build-guides/orange-pi-first-boot.json";
 import { getNode, validateBuildGuide, validateWorldCase } from "./graph";
 import type {
@@ -16,10 +15,7 @@ export interface GraphRepository {
   getBuildGuide(caseId: string): Promise<BuildGuide | null>;
 }
 
-const worldCases = [
-  orangePiFirstBoot as WorldCase,
-  leaf as WorldCase,
-].map(validateWorldCase);
+const worldCases = [orangePiFirstBoot as WorldCase].map(validateWorldCase);
 
 const guides = [orangePiFirstBootGuide as BuildGuide].map(
   validateBuildGuide,

@@ -23,21 +23,32 @@ aiRouter.post("/ask", async (req, res) => {
   if (!clean.length || totalLen > 200_000) return res.status(400).json({ error: "消息格式不正确或内容过长" });
 
   try {
-    const upstream = await fetch(STEP_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${STEP_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: STEP_MODEL,
-        messages: clean,
-        stream: true,
-        temperature: 0.6,
-        max_tokens: 4096,
-        reasoning_effort: process.env.STEP_REASONING || "low", // 问答场景优先响应速度
-      }),
+    const payload = JSON.stringify({
+      model: STEP_MODEL,
+      messages: clean,
+      stream: true,
+      temperature: 0.6,
+      max_tokens: 4096,
+      reasoning_effort: process.env.STEP_REASONING || "low", // 问答场景优先响应速度
     });
+    // 上游偶发连接超时（ETIMEDOUT），失败时自动重试一次
+    let upstream;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        upstream = await fetch(STEP_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${STEP_API_KEY}`,
+          },
+          body: payload,
+        });
+        break;
+      } catch (e) {
+        if (attempt >= 1) throw e;
+        console.warn("[ai] 上游连接失败，重试一次:", e?.cause?.code || e.message);
+      }
+    }
     if (!upstream.ok) {
       const detail = await upstream.text().catch(() => "");
       console.error("[ai] 上游错误", upstream.status, detail.slice(0, 500));

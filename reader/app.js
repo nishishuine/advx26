@@ -188,6 +188,7 @@ function bindUI(){
     renderTimeline();
   };
   $("#askSend").onclick=sendAsk;
+  $("#askMic").onclick=toggleAskMic;
   $("#askInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendAsk();});
   $("#charModal").addEventListener("click",e=>{if(e.target.id==="charModal")closeCharCard();});
   $("#confirmModal").addEventListener("click",e=>{if(e.target.id==="confirmModal")cancelConfirm();});
@@ -253,6 +254,7 @@ function switchTab(tab){
   if(tab==="chars")renderChars();
   if(tab==="timeline")renderTimeline();
   if(tab==="ask")renderAskIntro();
+  if(tab!=="ask")stopAskVoiceAll();
 }
 function renderAll(){renderProgress();renderChapter();}
 
@@ -813,7 +815,7 @@ function renderTimeline(){
 }
 
 /* ═══════ ask：阶跃星辰 Step 3.7 Flash ═══════ */
-const ASK={history:[],busy:false};
+const ASK={history:[],busy:false,voiceAsk:false,rec:null,speak:{on:false,btn:null,parts:[],idx:0}};
 function setAskScope(scope){
   if(scope===S.askScope)return;
   S.askScope=scope;
@@ -824,10 +826,10 @@ function setAskScope(scope){
 function renderAskIntro(){
   if(S.askScope==="full"){
     $("#askIntro").innerHTML=`当前为 <b>全书分析</b> 模式：我会基于整本书作答，<b>可能剧透</b>后面的情节。
-      <span class="ask-hint">由阶跃星辰 Step 3.7 Flash 驱动，支持自由提问。</span>`;
+      <span class="ask-hint">由阶跃星辰 Step 3.7 Flash 驱动，支持自由提问与 🎤 语音提问。</span>`;
   }else{
     $("#askIntro").innerHTML=`我只根据你已读到的 <b>第 ${S.chapter} 章·第 ${S.page+1} 页</b> 为止的内容回答，绝不剧透后面的事。
-      <span class="ask-hint">由阶跃星辰 Step 3.7 Flash 驱动，支持自由提问；想聊全书可切换上方「分析全书」。</span>`;
+      <span class="ask-hint">由阶跃星辰 Step 3.7 Flash 驱动，支持 🎤 语音提问；想聊全书可切换上方「分析全书」。</span>`;
   }
   const known=chars.filter(c=>S.appearedChars.has(c.id));
   const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
@@ -894,6 +896,7 @@ function askSystemPrompt(){
 /* ── 发送（SSE 流式） ── */
 async function sendAsk(){
   const q=($("#askInput").value||"").trim();if(!q||ASK.busy)return;
+  const fromVoice=ASK.voiceAsk;ASK.voiceAsk=false;
   $("#askInput").value="";
   const log=$("#askLog");
   log.insertAdjacentHTML("beforeend",`<div class="ask-bubble user">${esc(q)}</div>`);
@@ -938,6 +941,15 @@ async function sendAsk(){
     if(!acc)throw new Error("AI 没有返回内容，请重试");
     ASK.history.push({role:"user",content:q},{role:"assistant",content:acc});
     if(ASK.history.length>16)ASK.history=ASK.history.slice(-16);
+    /* 回答完成：附上朗读按钮；语音提问时自动读出答案 */
+    const plain=mdToPlainText(acc);
+    if(plain){
+      const sBtn=document.createElement("button");
+      sBtn.className="ask-speak";sBtn.textContent="🔊 朗读回答";
+      sBtn.onclick=()=>{if(ASK.speak.on&&ASK.speak.btn===sBtn)stopAskSpeak();else startAskSpeak(sBtn,plain);};
+      bubble.appendChild(sBtn);
+      if(fromVoice)startAskSpeak(sBtn,plain);
+    }
   }catch(err){
     bubble.classList.remove("thinking");
     bubble.innerHTML=`<p>😥 ${esc(err.message||"请求失败，请稍后重试")}</p>`;
@@ -999,12 +1011,84 @@ function mdToHtml(md){
   closePara();
   return html||`<p>${inline(md)}</p>`;
 }
+/* ── 语音提问（Web Speech 识别，说完自动发送） ── */
+function toggleAskMic(){
+  if(ASK.rec){ASK.rec.stop();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast("当前浏览器不支持语音识别，推荐用 Chrome/Edge/Safari");return;}
+  if(ASK.busy){toast("AI 正在回答，稍等再问");return;}
+  stopAskSpeak();stopTTS();
+  const rec=new SR();
+  rec.lang="zh-CN";rec.interimResults=true;rec.continuous=false;
+  let finalText="";
+  rec.onstart=()=>{$("#askMic").classList.add("rec");$("#askInput").placeholder="🎤 正在听…说完自动发送";};
+  rec.onresult=e=>{
+    let interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const r=e.results[i];
+      if(r.isFinal)finalText+=r[0].transcript;else interim+=r[0].transcript;
+    }
+    $("#askInput").value=finalText+interim;
+  };
+  rec.onerror=e=>{
+    if(e.error==="not-allowed"||e.error==="service-not-allowed")toast("麦克风权限被拒绝，请在浏览器设置中允许");
+    else if(e.error!=="aborted"&&e.error!=="no-speech")toast("语音识别出错："+e.error);
+  };
+  rec.onend=()=>{
+    ASK.rec=null;
+    $("#askMic").classList.remove("rec");
+    $("#askInput").placeholder="随便问：「XXX 是谁？」「A 和 B 什么关系？」「这本书想表达什么？」";
+    const q=($("#askInput").value||"").trim();
+    if(q){ASK.voiceAsk=true;sendAsk();}
+  };
+  ASK.rec=rec;
+  try{rec.start();}catch(e){ASK.rec=null;toast("语音识别启动失败，请重试");}
+}
+/* ── 答案朗读（分句队列，避免长文本被截断） ── */
+function mdToPlainText(md){
+  const tmp=document.createElement("div");
+  tmp.innerHTML=mdToHtml(md);
+  tmp.querySelectorAll("pre,code").forEach(el=>el.remove()); /* 代码不读 */
+  tmp.querySelectorAll("td,th,li,p,h1,h2,h3,h4,blockquote").forEach(el=>el.append("。"));
+  return (tmp.textContent||"").replace(/。{2,}/g,"。").replace(/\s+/g," ").trim();
+}
+function startAskSpeak(btn,text){
+  if(!window.speechSynthesis){toast("当前浏览器不支持语音合成");return;}
+  stopAskSpeak();stopTTS();
+  if(!S.tts.voice)pickVoice();
+  ASK.speak.on=true;ASK.speak.btn=btn;
+  ASK.speak.parts=text.split(/(?<=[。！？!?；;])/).map(s=>s.trim()).filter(Boolean);
+  ASK.speak.idx=0;
+  btn.classList.add("on");btn.textContent="⏹ 停止朗读";
+  askSpeakNext();
+}
+function askSpeakNext(){
+  if(!ASK.speak.on)return;
+  if(ASK.speak.idx>=ASK.speak.parts.length){stopAskSpeak();return;}
+  const u=new SpeechSynthesisUtterance(ASK.speak.parts[ASK.speak.idx]);
+  u.lang="zh-CN";u.rate=S.tts.rate||1;
+  if(S.tts.voice)u.voice=S.tts.voice;
+  u.onend=()=>{ASK.speak.idx++;askSpeakNext();};
+  u.onerror=()=>{ASK.speak.idx++;askSpeakNext();};
+  speechSynthesis.speak(u);
+}
+function stopAskSpeak(){
+  if(!ASK.speak.on)return;
+  ASK.speak.on=false;
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  if(ASK.speak.btn){ASK.speak.btn.classList.remove("on");ASK.speak.btn.textContent="🔊 朗读回答";ASK.speak.btn=null;}
+}
+function stopAskVoiceAll(){
+  if(ASK.rec)ASK.rec.stop();
+  stopAskSpeak();
+}
 
 /* ═══════ TTS ═══════ */
 function pickVoice(){const vs=speechSynthesis.getVoices();S.tts.voice=vs.find(v=>/zh|cmn/i.test(v.lang))||vs.find(v=>/Chinese/i.test(v.name))||null;}
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice();}
 function toggleTTS(){
   if(!window.speechSynthesis){toast("当前浏览器不支持语音合成");return;}
+  stopAskSpeak(); /* 与问AI朗读互斥 */
   if(S.tts.playing){
     speechSynthesis.cancel();S.tts.playing=false;S.tts.paused=true;
     clearSpeaking();

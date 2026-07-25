@@ -1,0 +1,115 @@
+// @vitest-environment jsdom
+
+import { act } from "react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { HomePage } from "./HomePage";
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
+  .IS_REACT_ACT_ENVIRONMENT = true;
+
+function ResultPage() {
+  const { caseId } = useParams();
+  const [searchParams] = useSearchParams();
+  return (
+    <div>
+      case:{caseId};from:{searchParams.get("from")}
+    </div>
+  );
+}
+
+function renderHome() {
+  return render(
+    <MemoryRouter initialEntries={["/"]}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/explore/:caseId" element={<ResultPage />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe("HomePage conversation entry", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it("只呈现核心输入、图片、语音与确认入口", () => {
+    renderHome();
+
+    expect(
+      screen.getByRole("heading", { name: "你想弄懂什么？" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "上传图片" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "开始语音输入" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "确认并生成关系图" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("LOCAL MVP")).toBeNull();
+    expect(screen.queryByText(/静态关系数据/)).toBeNull();
+  });
+
+  it("提交普通对象后进入物体关系图", () => {
+    renderHome();
+    const input = screen.getByLabelText("描述想要拆解的对象");
+    const submit = screen.getByRole("button", {
+      name: "确认并生成关系图",
+    });
+
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(input, {
+      target: { value: "怎样让 Orange Pi 3B 启动并发布第一个网页？" },
+    });
+    expect((submit as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(submit);
+
+    act(() => vi.advanceTimersByTime(600));
+    expect(
+      screen.getByText("case:orange-pi-first-boot;from:conversation"),
+    ).toBeTruthy();
+  });
+
+  it("识别叶片相关描述并进入生命案例", () => {
+    renderHome();
+    fireEvent.change(screen.getByLabelText("描述想要拆解的对象"), {
+      target: { value: "叶片如何完成光合作用？" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "确认并生成关系图" }),
+    );
+
+    act(() => vi.advanceTimersByTime(600));
+    expect(screen.getByText("case:leaf;from:conversation")).toBeTruthy();
+  });
+
+  it("中文输入法组词时按下回车不会误提交", () => {
+    renderHome();
+    const input = screen.getByLabelText("描述想要拆解的对象");
+    fireEvent.change(input, {
+      target: { value: "叶片如何交换气体？" },
+    });
+
+    fireEvent.keyDown(input, {
+      key: "Enter",
+      code: "Enter",
+      isComposing: true,
+    });
+    act(() => vi.advanceTimersByTime(600));
+
+    expect(screen.queryByText("case:leaf;from:conversation")).toBeNull();
+  });
+});

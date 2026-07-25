@@ -1,0 +1,604 @@
+{
+  "caseId": "orange-pi-first-boot",
+  "title": "让 Orange Pi 3B 从空白 TF 卡启动并发布第一张网页",
+  "summary": "在 Windows 上先只读清点文件和磁盘，确认 Orange Pi 3B、TF 卡、镜像与供电后再手动烧录；随后完成首次启动、局域网寻址、SSH 登录、系统体检和 Nginx 网页验收。所有可能擦除数据或损伤设备的动作前都设置明确确认门。",
+  "difficulty": "零基础可完成 · 烧录阶段需要逐项确认",
+  "totalTime": "约 2–4 小时，另加镜像下载与系统升级等待时间",
+  "budget": "优先使用已有板卡与读卡器；缺少 TF 卡、合格电源、网线或散热片时按本地采购价格为准",
+  "tools": [
+    "Windows PowerShell",
+    "可信来源的系统镜像与 SHA256 校验信息",
+    "Armbian Imager、balenaEtcher、Rufus 或 Orange Pi 官方推荐烧录工具",
+    "路由器管理后台",
+    "Windows OpenSSH 客户端",
+    "Windows 浏览器",
+    "可选：HDMI 显示器与 USB 键盘"
+  ],
+  "programFlow": [
+    "只读清点本地文件",
+    "确认硬件与电源",
+    "锁定 TF 卡与镜像",
+    "烧录并完成校验",
+    "断电接线与首次启动",
+    "找到 IP 并通过 SSH 登录",
+    "系统体检与更新",
+    "部署网页并安全关机"
+  ],
+  "parts": [
+    {
+      "id": "orange-pi-3b",
+      "name": "Orange Pi 3B 2GB",
+      "quantity": "1 块",
+      "purpose": "运行 Linux、SSH 与 Nginx 服务",
+      "estimate": "开始前确认板型确实是 Orange Pi 3B，而不是名称相近的其他型号",
+      "status": "core"
+    },
+    {
+      "id": "micro-sd-card",
+      "name": "microSD / TF 卡",
+      "quantity": "1 张",
+      "purpose": "保存系统镜像并作为首次启动介质",
+      "estimate": "读卡器不等于 TF 卡；容量和健康状态必须能够支持所选系统",
+      "status": "core"
+    },
+    {
+      "id": "card-reader",
+      "name": "TF 卡读卡器",
+      "quantity": "1 个",
+      "purpose": "把 TF 卡连接到 Windows 以便识别和烧录",
+      "estimate": "优先使用连接稳定、能正确报告卡容量的读卡器",
+      "status": "core"
+    },
+    {
+      "id": "power-adapter",
+      "name": "稳定的 Type-C 电源适配器",
+      "quantity": "1 个",
+      "purpose": "为 Orange Pi 3B 提供稳定的 5V 供电",
+      "estimate": "必须查看铭牌上的输出电压、电流和 5V 档位，不凭“手机充电器”判断",
+      "status": "core"
+    },
+    {
+      "id": "type-c-cable",
+      "name": "可靠的 Type-C 电源线",
+      "quantity": "1 根",
+      "purpose": "把适配器电能送到板卡并降低线材压降风险",
+      "estimate": "线材规格不明、接口松动或反复掉电时先更换可靠线材",
+      "status": "core"
+    },
+    {
+      "id": "windows-pc",
+      "name": "Windows 电脑",
+      "quantity": "1 台",
+      "purpose": "检查文件与磁盘、烧录 TF 卡、执行 SSH 并访问网页",
+      "estimate": "需要可用的 USB 接口、PowerShell 和浏览器",
+      "status": "core"
+    },
+    {
+      "id": "ethernet-cable",
+      "name": "网线",
+      "quantity": "1 根",
+      "purpose": "首次启动时把 Orange Pi 稳定接入路由器",
+      "estimate": "有线连接更容易从 DHCP 列表定位新设备",
+      "status": "core"
+    },
+    {
+      "id": "router",
+      "name": "带 DHCP 的路由器",
+      "quantity": "1 台",
+      "purpose": "为 Orange Pi 分配局域网 IP，并连接 Windows 与板卡",
+      "estimate": "需要能够查看已连接设备或 DHCP 客户端列表",
+      "status": "core"
+    },
+    {
+      "id": "heatsink",
+      "name": "散热片",
+      "quantity": "1 套",
+      "purpose": "降低持续运行和系统升级时的温度",
+      "estimate": "强烈建议安装，粘贴时避免短接周围器件",
+      "status": "support"
+    },
+    {
+      "id": "local-console",
+      "name": "HDMI 显示器、线材与 USB 键盘",
+      "quantity": "可选 1 套",
+      "purpose": "在无网络或首次启动异常时提供本地画面和输入",
+      "estimate": "Minimal 系统可能只有文字终端，没有图形桌面",
+      "status": "support"
+    },
+    {
+      "id": "case-and-mouse",
+      "name": "外壳与 USB 鼠标",
+      "quantity": "可选",
+      "purpose": "保护板卡，或在安装桌面系统时提供指针输入",
+      "estimate": "不影响无头 SSH 与网页服务器最小链路",
+      "status": "support"
+    }
+  ],
+  "connections": [
+    {
+      "from": "TF 卡",
+      "to": "Windows 电脑",
+      "via": "TF 卡读卡器与 USB 接口",
+      "reason": "让 Windows 只读识别容量、型号和卷信息，并在确认后写入镜像"
+    },
+    {
+      "from": "系统镜像文件",
+      "to": "TF 卡",
+      "via": "可信烧录工具的写入与校验流程",
+      "reason": "把压缩镜像或解压后的磁盘镜像转换为可启动介质"
+    },
+    {
+      "from": "已校验的 TF 卡",
+      "to": "Orange Pi 3B",
+      "via": "板卡 TF 卡槽",
+      "reason": "为板卡提供启动固件、Linux 内核和根文件系统"
+    },
+    {
+      "from": "Type-C 电源适配器",
+      "to": "Orange Pi 3B 供电接口",
+      "via": "可靠的 Type-C 电源线",
+      "reason": "在其他连接完成后最后通电，向板卡提供稳定的 5V 电源"
+    },
+    {
+      "from": "Orange Pi 3B 网口",
+      "to": "路由器 LAN 口",
+      "via": "网线",
+      "reason": "让路由器通过 DHCP 分配地址，并为 SSH 和 HTTP 建立局域网路径"
+    },
+    {
+      "from": "Windows 电脑",
+      "to": "同一台路由器",
+      "via": "有线网络或可信 Wi-Fi",
+      "reason": "让 Windows 与 Orange Pi 位于可互访的局域网中"
+    },
+    {
+      "from": "Windows PowerShell",
+      "to": "Orange Pi SSH 服务",
+      "via": "用户名、板卡 IP 与 TCP 22 端口",
+      "reason": "建立加密远程终端以完成首次账户设置和系统管理"
+    },
+    {
+      "from": "Windows 浏览器",
+      "to": "Orange Pi Nginx 服务",
+      "via": "http://OrangePi的IP 与 TCP 80 端口",
+      "reason": "从另一台设备验证网页服务确实通过局域网可访问"
+    },
+    {
+      "from": "Orange Pi HDMI 接口",
+      "to": "显示器",
+      "via": "匹配接口的 HDMI 线",
+      "reason": "在可选的本地控制台上观察首次启动与错误信息"
+    }
+  ],
+  "steps": [
+    {
+      "id": "audit-local-files",
+      "phase": "阶段 1",
+      "title": "只读清点本地文件",
+      "purpose": "先判断本地是否已有适用于 Orange Pi 3B 的镜像、烧录工具或文档，避免重复下载和误用未知文件。",
+      "prerequisites": [
+        "Windows 电脑已启动",
+        "准备检查的路径是 G:\\新建文件夹",
+        "本阶段不修改、移动、解压或删除任何文件"
+      ],
+      "instructions": [
+        "在 PowerShell 执行 `Get-ChildItem -LiteralPath \"G:\\新建文件夹\" -Force`，先查看一级目录与主要文件。",
+        "执行 `Get-ChildItem -LiteralPath \"G:\\新建文件夹\" -Recurse -File | Select-Object FullName, Length, LastWriteTime`，建立只读文件索引；文件很多时只保留分类摘要。",
+        "按系统镜像 `.img`、`.img.xz`、`.img.gz`、`.iso`，压缩包 `.zip`、`.7z`、`.rar`，以及烧录工具、驱动、Orange Pi 文档、Armbian 文件、项目代码和其他文件分类。",
+        "对疑似镜像记录文件名、完整路径、字节大小和修改时间，但不只凭文件名判断兼容性。",
+        "如果没有明确适配 Orange Pi 3B 的镜像，记录“需要从可信来源下载”，不要拿相近板型镜像试烧。"
+      ],
+      "successCriteria": [
+        "得到简洁的目录分类摘要",
+        "每个候选镜像都有路径、大小和修改时间",
+        "已明确本地是否存在候选镜像和烧录工具",
+        "扫描期间没有修改任何本地文件"
+      ],
+      "troubleshooting": [
+        "若 G: 不存在，先检查移动磁盘是否连接以及实际盘符，不创建同名目录代替。",
+        "若提示拒绝访问，只记录无法读取的位置，不提升权限后批量修改权限。",
+        "若文件数量过多，先按扩展名统计，再只展开镜像、烧录工具和文档候选。",
+        "若候选只有压缩包，先识别内容与来源，不因扩展名相似就认定可用。"
+      ],
+      "duration": "10–30 分钟"
+    },
+    {
+      "id": "confirm-hardware",
+      "phase": "阶段 2",
+      "title": "确认硬件和供电条件",
+      "purpose": "在接触磁盘写入或给板卡通电前，确认最小硬件链齐全且电源规格可核实。",
+      "prerequisites": [
+        "已完成本地文件清点",
+        "Orange Pi 3B 当前保持断电",
+        "可以直接查看板卡型号与电源适配器铭牌"
+      ],
+      "instructions": [
+        "逐项确认 Orange Pi 3B 2GB、TF 卡、TF 卡读卡器、Type-C 电源适配器、Type-C 线和 Windows 电脑。",
+        "单独确认“读卡器”和“TF 卡”是两个不同物件，并记录 TF 卡标称容量。",
+        "查看电源适配器铭牌，记录输出电压、输出电流、是否有稳定 5V 档位以及线材状态；规格不清时暂停通电。",
+        "确认是否有网线和可查看 DHCP 客户端的路由器。",
+        "记录散热片，以及可选的 HDMI 线、显示器、USB 键盘、鼠标和外壳是否具备。",
+        "本阶段不要把舵机、电机、继电器、未知模块或未确认针脚的杜邦线接到 GPIO。"
+      ],
+      "successCriteria": [
+        "板卡型号确认为 Orange Pi 3B 2GB",
+        "TF 卡和读卡器都已单独确认",
+        "电源铭牌的电压、电流和 5V 档位已记录且规格明确",
+        "已确认可用的网线与路由器，或明确了需要补齐的配件"
+      ],
+      "troubleshooting": [
+        "若只有读卡器而没有 TF 卡，停止后续烧录并补齐 TF 卡。",
+        "若电源铭牌模糊、没有明确 5V 输出或线材可靠性未知，先更换合格电源与线材。",
+        "若没有网线，可准备本地 HDMI 控制台，但不要假设系统已配置 Wi-Fi。",
+        "若板卡型号无法确认，拍摄正反面丝印并暂停镜像选择。"
+      ],
+      "duration": "10–20 分钟"
+    },
+    {
+      "id": "identify-tf-card",
+      "phase": "阶段 3",
+      "title": "在 Windows 中锁定唯一的 TF 卡",
+      "purpose": "用磁盘编号、容量、型号、总线类型和盘符共同识别目标，防止把电脑硬盘、移动硬盘或 U 盘当成烧录目标。",
+      "prerequisites": [
+        "TF 卡已经插入读卡器并连接 Windows",
+        "已记录 TF 卡的标称容量",
+        "本阶段尚未打开烧录工具，也不会执行任何写入命令"
+      ],
+      "instructions": [
+        "在 PowerShell 执行 `Get-Disk | Select-Object Number, FriendlyName, BusType, Size, PartitionStyle, OperationalStatus`。",
+        "执行 `Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, Size, SizeRemaining`。",
+        "结合插拔前后变化、磁盘编号、容量、设备名称、总线类型和盘符区分系统硬盘、移动硬盘、U 盘与 TF 卡。",
+        "记录候选 TF 卡的磁盘编号、容量、型号、总线类型、盘符和当前状态。",
+        "只有在唯一目标得到人工明确确认后，才允许进入镜像选择；在此之前禁止格式化、`clean`、`Remove-Partition` 或任何镜像写入。"
+      ],
+      "successCriteria": [
+        "唯一 TF 卡已由磁盘编号、容量、型号和连接变化共同确认",
+        "确认结果与 TF 卡标称容量相符",
+        "不存在未排除的第二个移动磁盘",
+        "整个识别过程只使用了只读命令"
+      ],
+      "troubleshooting": [
+        "若同时出现多个移动磁盘，立即停止并逐个断开无关设备后重新读取列表。",
+        "若两个设备容量相近，使用安全插拔后的列表差异确认，不凭盘符猜测。",
+        "若 Windows 没有分配盘符，仍可通过 Get-Disk 识别；不要因此格式化。",
+        "若容量、型号或总线信息异常，先更换 USB 接口或读卡器，不进入烧录。"
+      ],
+      "duration": "10–25 分钟"
+    },
+    {
+      "id": "select-and-verify-image",
+      "phase": "阶段 4",
+      "title": "选择并验证 Orange Pi 3B 系统镜像",
+      "purpose": "确认镜像明确支持 Orange Pi 3B、来源可信且校验一致，再把它交给烧录工具。",
+      "prerequisites": [
+        "板卡型号已经确认",
+        "TF 卡目标已经唯一确认",
+        "本地候选镜像已经完成只读分类"
+      ],
+      "instructions": [
+        "优先查找 Orange Pi 官方为 Orange Pi 3B 提供的稳定镜像，其次查找 Armbian 对 Orange Pi 3B 的稳定支持，再考虑其他经过验证的社区镜像。",
+        "逐项确认目标板型号明确写着 Orange Pi 3B；排除 Orange Pi 3、3 LTS、Zero 3 和 5 系列镜像。",
+        "针对 2GB 内存优先选择 Debian 或 Ubuntu 系的 Minimal、CLI 或轻量桌面版本，并确认该镜像支持目标首次登录或 SSH 流程。",
+        "记录下载页面、镜像名称、目标板型号、发布日期、文件大小和发布方提供的 SHA256。",
+        "对下载文件执行 `Get-FileHash -Algorithm SHA256 \"镜像文件路径\"`，与发布方校验值逐字符比较。",
+        "如果没有适用本地镜像，从官方页面下载；不要假设任务书中的历史版本仍是最新版本。"
+      ],
+      "successCriteria": [
+        "镜像页面明确支持 Orange Pi 3B",
+        "已记录镜像名称、来源、发布日期、大小与系统类型",
+        "本地文件 SHA256 与可信来源公布值一致，或已明确记录来源未提供校验值",
+        "已确认所选镜像的首次账号与 SSH 规则需要在后续按官方说明执行"
+      ],
+      "troubleshooting": [
+        "若镜像只写 Orange Pi 3、3 LTS、Zero 3 或其他系列，立即排除。",
+        "若 SHA256 不一致，不烧录该文件；重新核对下载是否完整、校验算法和官方校验文本。",
+        "若官方与社区页面信息冲突，以板卡官方或镜像项目官方的 Orange Pi 3B 页面为优先依据。",
+        "若只有桌面大镜像且 TF 卡或 2GB 内存余量不足，返回选择轻量版本。"
+      ],
+      "duration": "20–60 分钟，不含下载等待"
+    },
+    {
+      "id": "select-imager-and-preflight",
+      "phase": "阶段 5",
+      "title": "选择烧录工具并完成写入前确认",
+      "purpose": "选用支持目标镜像格式和写后校验的可信工具，并在任何写入发生前复述唯一目标。",
+      "prerequisites": [
+        "镜像兼容性和来源已经确认",
+        "镜像校验已通过或校验信息缺失已被明确记录",
+        "TF 卡的磁盘编号、容量和型号已经由用户确认"
+      ],
+      "instructions": [
+        "在 Armbian Imager、balenaEtcher、Rufus 或 Orange Pi 官方推荐工具中选择一个可信工具。",
+        "确认该工具是否支持当前压缩镜像直接写入、是否自动进行写后校验，以及是否需要管理员权限。",
+        "打开工具后只选择镜像和目标，不立即点击最终写入。",
+        "在确认界面明确显示四项：`镜像`、`目标设备`、`目标容量`、`即将清空`。",
+        "把工具中的目标名称和容量与阶段 3 的记录再次对照。",
+        "只有用户明确确认目标就是 TF 卡后，才进入实际烧录。"
+      ],
+      "successCriteria": [
+        "烧录工具来源可信并支持当前镜像格式",
+        "已知工具是否提供写后校验和是否需要管理员权限",
+        "镜像、目标设备、目标容量和清空范围四项全部可见且一致",
+        "最终写入尚未自动开始，人工确认门有效"
+      ],
+      "troubleshooting": [
+        "若工具列出多个相同容量设备，退出工具并回到磁盘识别阶段。",
+        "若工具不支持压缩格式，按镜像官方说明使用受支持工具或可信方式解压，不尝试未知转换器。",
+        "若显示的容量与已确认 TF 卡不符，取消操作并重新插拔识别。",
+        "若工具没有校验功能，优先换用带校验的可信工具。"
+      ],
+      "duration": "10–20 分钟"
+    },
+    {
+      "id": "flash-and-eject",
+      "phase": "阶段 6",
+      "title": "烧录、校验并安全弹出 TF 卡",
+      "purpose": "把已验证镜像写入唯一确认的 TF 卡，并确保写入校验完成后再把卡移到板卡。",
+      "prerequisites": [
+        "烧录前四项信息已经显示并得到人工确认",
+        "所有可能占用 TF 卡的资源管理器窗口已关闭",
+        "Windows 和读卡器供电稳定"
+      ],
+      "instructions": [
+        "在烧录工具中再次确认正确镜像与已经确认的 TF 卡。",
+        "由用户手动开始写入，并在整个写入过程中保持读卡器连接稳定。",
+        "等待写入完成后继续等待工具的校验阶段完成，不因进度长时间停留就拔卡。",
+        "如果 Windows 弹出“需要格式化磁盘才能使用”，选择“取消”；Linux 分区不能被 Windows 识别通常不代表烧录失败。",
+        "校验通过后使用 Windows 安全弹出功能移除读卡器。",
+        "不要手动格式化或修改烧录后出现的未知分区。"
+      ],
+      "successCriteria": [
+        "烧录工具报告写入成功",
+        "写后校验成功完成",
+        "Windows 格式化提示如有出现已被取消",
+        "TF 卡已通过安全弹出移除且未知分区未被修改"
+      ],
+      "troubleshooting": [
+        "若校验失败，不把该卡用于启动；重新检查镜像哈希、读卡器、USB 接口和 TF 卡健康状态。",
+        "若写入工具提示设备被占用，关闭资源管理器和磁盘相关程序后重试，不强制卸载系统磁盘。",
+        "若读卡器中途断开，视为写入不完整，重新识别唯一目标后从头烧录。",
+        "若 Windows 反复要求格式化，持续选择取消，并以烧录工具校验结果为判断依据。"
+      ],
+      "duration": "15–45 分钟"
+    },
+    {
+      "id": "wire-and-first-boot",
+      "phase": "阶段 7",
+      "title": "按安全顺序接线并首次启动",
+      "purpose": "在断电状态完成启动介质和网络连接，最后通电并给系统足够的初始化时间。",
+      "prerequisites": [
+        "TF 卡烧录与校验均已成功",
+        "Orange Pi 3B 保持完全断电",
+        "电源规格、Type-C 线和网线已经确认可用"
+      ],
+      "instructions": [
+        "在板卡断电时插入已烧录的 TF 卡，并确认卡已到位。",
+        "用网线把 Orange Pi 3B 接到路由器 LAN 口。",
+        "如需本地观察，可连接 HDMI 显示器和 USB 键盘。",
+        "不要连接舵机、电机、继电器、未知模块或未确认针脚的杜邦线。",
+        "最后连接 Type-C 电源，开始首次启动。",
+        "给系统足够时间进行首次初始化，不要反复拔电；观察板卡指示灯、网口灯、显示器信息和路由器新设备。"
+      ],
+      "successCriteria": [
+        "TF 卡、网线和可选本地控制台均在断电状态连接",
+        "Type-C 电源是最后接入的连接",
+        "板卡出现合理的启动指示，且没有反复掉电重启",
+        "路由器或本地显示器出现至少一种系统已启动的证据"
+      ],
+      "troubleshooting": [
+        "完全不亮灯时依次检查适配器规格、Type-C 线、供电接口和插座。",
+        "有灯但无法启动时检查 TF 卡是否插紧、镜像是否支持 3B、烧录校验和 TF 卡健康。",
+        "反复重启时优先怀疑电源不足、线材压降、TF 卡质量或外接设备耗电。",
+        "HDMI 黑屏时先判断是否为无桌面的 Minimal 系统；不要仅凭黑屏认定系统未启动。"
+      ],
+      "duration": "10–30 分钟"
+    },
+    {
+      "id": "discover-ip",
+      "phase": "阶段 8",
+      "title": "找到 Orange Pi 的局域网 IP",
+      "purpose": "从路由器和 Windows 的只读网络信息中确认板卡地址，为 SSH 建立明确目标。",
+      "prerequisites": [
+        "Orange Pi 已通电并完成首次启动等待",
+        "Orange Pi 通过网线连接路由器",
+        "Windows 与 Orange Pi 接入同一局域网"
+      ],
+      "instructions": [
+        "优先打开路由器后台的已连接设备、DHCP 客户端或在线终端列表，查找可能名为 `orangepi`、`armbian`、`debian` 或 `ubuntu` 的新设备。",
+        "在 Windows PowerShell 执行 `ipconfig`，记录 Windows IP、子网和默认网关。",
+        "执行 `arp -a`，把邻居地址与路由器列表交叉比对。",
+        "可依次尝试 `ping orangepi.local` 和 `ping armbian.local`；mDNS 失败不等于板卡离线。",
+        "对候选地址执行 `ping 候选IP`，并通过插拔网线前后的路由器列表变化进一步确认。",
+        "记录 Orange Pi IP、Windows IP 和网关，不安装来源不明的局域网扫描软件。"
+      ],
+      "successCriteria": [
+        "已记录唯一或高度可信的 Orange Pi IP",
+        "Windows IP、Orange Pi IP 和网关信息均已保存",
+        "候选地址由路由器列表、ARP、主机名或连通性中的至少两项证据支持",
+        "没有使用来源不明的扫描工具"
+      ],
+      "troubleshooting": [
+        "找不到 IP 时检查网口灯、路由器 DHCP、系统是否完成启动以及是否插错网口。",
+        "若 Windows 与板卡不在同一网段，先检查 Windows 实际连接的路由器或访客网络隔离。",
+        "若出现多个候选地址，通过断开和恢复 Orange Pi 网线观察 DHCP 列表变化。",
+        "若主机名无法解析，继续使用路由器和 ARP 结果，不反复修改 Windows 网络设置。"
+      ],
+      "duration": "10–30 分钟"
+    },
+    {
+      "id": "ssh-first-login",
+      "phase": "阶段 9",
+      "title": "完成第一次 SSH 登录与账户初始化",
+      "purpose": "根据所选镜像的官方规则建立加密远程终端，并完成必要的密码与普通用户设置。",
+      "prerequisites": [
+        "Orange Pi IP 已确认",
+        "已查阅所选镜像官方说明中的默认用户名、密码和首次登录规则",
+        "Windows 与 Orange Pi 网络可达"
+      ],
+      "instructions": [
+        "在 Windows PowerShell 执行 `ssh 用户名@OrangePi的IP`；不要默认所有镜像都允许 root 或使用相同账号。",
+        "首次出现主机指纹时，核对目标 IP，理解这是记录首次见到的主机身份后再输入 `yes`。",
+        "输入密码时终端不显示字符属于正常现象，不要因此连续粘贴密码。",
+        "按镜像要求修改初始密码、创建普通用户或完成首次向导。",
+        "登录后确认终端提示符属于 Orange Pi，日常操作优先使用普通用户而不是长期使用 root。"
+      ],
+      "successCriteria": [
+        "Windows 已建立到正确 IP 的 SSH 会话",
+        "首次主机指纹已在确认目标后接受",
+        "镜像要求的密码修改或普通用户创建已经完成",
+        "当前能在 Orange Pi shell 中执行只读命令"
+      ],
+      "troubleshooting": [
+        "SSH 超时时检查 IP、板卡在线状态、SSH 服务、网络隔离和 Windows 网络路径。",
+        "SSH 拒绝连接说明设备可达但服务可能未启动、使用不同端口、默认关闭或仍在初始化。",
+        "密码错误时停止盲试，回到所选镜像官方说明核对账号、密码和首次登录规则。",
+        "若主机指纹与该 IP 以前记录的不一致，先确认 IP 是否被其他设备复用，不直接忽略警告。"
+      ],
+      "duration": "10–30 分钟"
+    },
+    {
+      "id": "inspect-system",
+      "phase": "阶段 10",
+      "title": "检查系统、资源、网络和温度",
+      "purpose": "用少量只读命令确认运行的系统与预期一致，并建立后续更新和部署前的健康基线。",
+      "prerequisites": [
+        "已通过 SSH 登录 Orange Pi",
+        "当前 shell 可以执行普通只读命令",
+        "每次只执行一小组命令并查看结果"
+      ],
+      "instructions": [
+        "执行 `cat /etc/os-release` 和 `uname -a`，记录发行版、版本与内核。",
+        "执行 `hostname`、`hostname -I` 和 `ip -br address`，记录主机名与活动网络接口。",
+        "执行 `free -h`，检查约 2GB 内存是否被系统识别。",
+        "执行 `df -h` 和 `lsblk`，检查根文件系统与 TF 卡空间。",
+        "执行 `lscpu` 和 `uptime`，查看 CPU 信息与运行时间。",
+        "执行 `cat /sys/class/thermal/thermal_zone0/temp`；例如输出 45000 表示约 45°C。",
+        "把异常输出单独记录，不为一个缺失命令安装大量无关软件。"
+      ],
+      "successCriteria": [
+        "系统发行版和内核信息可读取",
+        "主机名、IP 与活动接口符合当前连接",
+        "内存、磁盘和 CPU 信息均能读取且容量基本符合硬件",
+        "已取得温度读数，或明确记录当前系统没有该温度路径"
+      ],
+      "troubleshooting": [
+        "若内存明显少于预期，保存 `free -h` 和启动日志信息，不立即修改内核参数。",
+        "若根分区空间异常小，先确认镜像是否自动扩容及 `lsblk` 布局，不手动重分区。",
+        "若温度路径不存在，根据当前系统官方工具继续检查，不批量安装监控套件。",
+        "若网络接口没有地址，回到 DHCP、网线和路由器阶段排查。"
+      ],
+      "duration": "15–30 分钟"
+    },
+    {
+      "id": "update-system",
+      "phase": "阶段 11",
+      "title": "在网络稳定时更新系统",
+      "purpose": "刷新 Debian 或 Ubuntu 系软件索引并安装安全与稳定性更新，同时避免误删板级内核包。",
+      "prerequisites": [
+        "系统体检没有发现阻止继续的电源、存储或温度异常",
+        "Orange Pi 能稳定访问软件源",
+        "供电和网络可以在更新期间保持连接"
+      ],
+      "instructions": [
+        "先说明更新可能需要较长时间，期间不要断网、拔电或关闭 SSH 窗口。",
+        "执行 `sudo apt update`，确认软件源索引可以正常刷新。",
+        "执行 `sudo apt upgrade -y`，若出现需要人工选择的配置或引导问题，暂停并查看具体提示。",
+        "更新完成后执行 `sudo apt autoremove` 查看候选清理项；不要擅自删除大量内核或板级软件包。",
+        "如更新提示需要重启，先保存输出并按系统提示安排安全重启。"
+      ],
+      "successCriteria": [
+        "`sudo apt update` 没有未解释的软件源错误",
+        "升级过程正常完成，或交互问题已被明确记录并暂停处理",
+        "没有误删内核、启动组件或板级支持包",
+        "更新后 SSH 与网络仍然可用"
+      ],
+      "troubleshooting": [
+        "若软件源无法访问，先检查 DNS、网关、系统时间和镜像源状态，不重复盲目执行升级。",
+        "若出现配置文件选择或引导相关交互，暂停并保存完整提示。",
+        "若磁盘空间不足，先用 `df -h` 定位占用，不直接执行大范围删除。",
+        "若 SSH 中断，等待板卡稳定后从路由器确认 IP，再重新连接并检查升级状态。"
+      ],
+      "duration": "20–90 分钟"
+    },
+    {
+      "id": "deploy-nginx",
+      "phase": "阶段 12",
+      "title": "部署 Nginx 并从 Windows 打开网页",
+      "purpose": "建立一个可从局域网访问的网页服务，把板卡启动、网络、SSH、软件管理和 HTTP 服务串成闭环。",
+      "prerequisites": [
+        "SSH 会话稳定且系统网络正常",
+        "软件源索引已经成功刷新",
+        "当前用户能够使用 sudo"
+      ],
+      "instructions": [
+        "执行 `sudo apt install nginx -y` 安装 Nginx。",
+        "执行 `sudo systemctl enable --now nginx`，立即启动并设置开机运行。",
+        "执行 `systemctl status nginx`，确认服务显示 `active (running)`。",
+        "执行 `echo '<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Orange Pi 3B</title></head><body><h1>Orange Pi 3B 已成功运行</h1><p>这是我的第一个硬件 Linux 项目。</p></body></html>' | sudo tee /var/www/html/index.html` 创建首页。",
+        "执行 `hostname -I` 再次确认板卡地址。",
+        "在 Windows 浏览器打开 `http://OrangePi的IP`，不要把示例文字当成真实地址。"
+      ],
+      "successCriteria": [
+        "Nginx 已安装且状态为 `active (running)`",
+        "`/var/www/html/index.html` 已写入目标中文标题和说明",
+        "Windows 浏览器能通过板卡 IP 打开页面",
+        "网页内容来自 Orange Pi，而不是浏览器缓存或其他同地址设备"
+      ],
+      "troubleshooting": [
+        "若 Nginx 无法启动，查看 `systemctl status nginx` 的具体错误并检查端口占用。",
+        "若本机状态正常但浏览器超时，检查板卡 IP、路由器隔离、防火墙和 Windows 是否仍在同一局域网。",
+        "若看到默认欢迎页，确认首页写入路径和浏览器缓存，再重新加载。",
+        "若写入提示权限不足，确认命令通过 `sudo tee` 写入，而不是只给 `echo` 加 sudo。"
+      ],
+      "duration": "15–35 分钟"
+    },
+    {
+      "id": "accept-and-shutdown",
+      "phase": "阶段 13",
+      "title": "完成验收并学习安全关机",
+      "purpose": "用可复查的结果确认完整链路成功，并确保以后不会在系统运行时直接断电或拔卡。",
+      "prerequisites": [
+        "Windows 已能通过 SSH 登录 Orange Pi",
+        "Nginx 已运行并且浏览器已尝试访问",
+        "系统体检结果已经记录"
+      ],
+      "instructions": [
+        "逐项确认指示灯、系统启动、路由器设备、ping、SSH、约 2GB 内存、TF 卡空间、网络、Nginx 状态和浏览器页面。",
+        "保存 Orange Pi IP、所选镜像名称、普通用户名和关键验收输出；不要保存明文密码。",
+        "需要关闭设备时，在 SSH 中执行 `sudo poweroff`。",
+        "等待系统完成关机、网络连接消失和指示状态稳定后，再拔 Type-C 电源。",
+        "只有在完全断电后才允许拔插 TF 卡。",
+        "后续可按“Linux 文件与权限、systemd、网络、网页开发、GPIO 安全规范、备份与恢复”的顺序继续学习。"
+      ],
+      "successCriteria": [
+        "Windows 可以通过 SSH 登录 Orange Pi",
+        "Windows 浏览器可以打开 Orange Pi 上运行的网页",
+        "内存、存储、网络和温度检查已有记录",
+        "已掌握 `sudo poweroff`，并知道关机完成后才能拔电或 TF 卡"
+      ],
+      "troubleshooting": [
+        "若 SSH 成功但网页失败，集中检查 Nginx 状态、端口 80、首页路径和局域网访问，不重做烧录。",
+        "若网页成功但 SSH 失败，确认是否访问了正确设备，并检查 SSH 服务与账号规则。",
+        "若关机命令后设备仍响应，等待并检查终端输出，不立即拔电。",
+        "若任一验收项不通过，回到对应阶段一次只改变一个变量并重新验证。"
+      ],
+      "duration": "10–20 分钟"
+    }
+  ],
+  "safety": [
+    "不要自动格式化任何磁盘；在目标 TF 卡容量、盘符、型号和磁盘编号得到明确确认前禁止写入。",
+    "如果 Windows 中存在多个移动磁盘，立即停止烧录流程并让用户逐一确认。",
+    "禁止对未确认磁盘执行格式化、clean、Remove-Partition、删除分区或镜像写入。",
+    "烧录前必须再次显示镜像、目标设备、目标容量和即将清空的范围，并由用户手动确认最终写入。",
+    "Windows 在烧录后提示“需要格式化磁盘才能使用”时选择取消，不修改未知 Linux 分区。",
+    "Orange Pi 通电时不要拔插 TF 卡；必须完全断电后才能移动启动介质。",
+    "不要仅凭“手机充电器”判断电源可用；必须查看输出电压、电流、稳定 5V 档位和线材可靠性。",
+    "不要把舵机、电机、继电器或高功率模块直接接到 GPIO 供电，也不要连接未确认针脚的杜邦线。",
+    "系统运行中不要直接拔电；先执行 `sudo poweroff`，等待关机完成后再断开 Type-C 电源。",
+    "不要为了尝试启动而使用为 Orange Pi 3、3 LTS、Zero 3 或 5 系列准备的镜像。",
+    "不要修改 Windows BIOS、虚拟化、安全启动或系统安全策略来解决本任务中的问题。",
+    "遇到故障时一次只排查一个变量，不连续执行来源不明或具有破坏性的命令。",
+    "系统更新期间保持稳定供电和网络；遇到交互选择时暂停查看，不擅自删除内核或板级软件包。",
+    "不记录或公开明文密码、路由器管理密码和其他凭据。"
+  ]
+}

@@ -1,0 +1,1318 @@
+{
+  "id": "smart-trash-bin",
+  "title": "自动开盖垃圾桶",
+  "shortTitle": "自动垃圾桶",
+  "eyebrow": "物体案例 · 感知—判断—动作",
+  "description": "一个用距离传感器发现手部靠近、由控制器判断并驱动舵机打开桶盖的低压原型。案例同时展示结构、信号、能量与因果四种关系。",
+  "domain": "object",
+  "rootNodeId": "smart-trash-bin",
+  "accent": "#61E6C5",
+  "accentSoft": "rgba(97, 230, 197, 0.16)",
+  "keyInsight": "手靠近 → 距离传感器检测 → 控制器判断 → 舵机转动 → 连杆传动 → 桶盖打开",
+  "nodes": [
+    {
+      "id": "smart-trash-bin",
+      "parentId": null,
+      "label": "自动开盖垃圾桶",
+      "summary": "把靠近动作转化为桶盖开合的机电系统。",
+      "domain": "object",
+      "level": 0,
+      "function": "协调感知、控制、执行、传动、供电与结构，让用户无需接触桶盖即可投放垃圾。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "guided",
+      "source": "人工整理：依据 PRD 预置案例、常见 ESP32 自动开盖原型与低压 Maker 实践",
+      "index": 0
+    },
+    {
+      "id": "sensing-system",
+      "parentId": "smart-trash-bin",
+      "label": "感知系统",
+      "summary": "发现手或物体进入桶口附近。",
+      "domain": "object",
+      "level": 1,
+      "function": "把物体距离变化转换成控制器可读取的时间或数字信号。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "guided",
+      "source": "HC-SR04 超声波测距模块通用数据手册与原理说明",
+      "index": 1
+    },
+    {
+      "id": "control-system",
+      "parentId": "smart-trash-bin",
+      "label": "控制系统",
+      "summary": "判断何时开盖、保持多久以及何时关闭。",
+      "domain": "object",
+      "level": 1,
+      "function": "读取距离、应用阈值与延时规则，再输出舵机控制命令。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "guided",
+      "source": "ESP32 Arduino 核心文档与本案例人工整理的状态机逻辑",
+      "index": 2
+    },
+    {
+      "id": "actuation-system",
+      "parentId": "smart-trash-bin",
+      "label": "执行系统",
+      "summary": "把电控制命令转成可用的旋转动作。",
+      "domain": "object",
+      "level": 1,
+      "function": "由舵机按指定角度旋转，并在开盖期间保持位置。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "guided",
+      "source": "SG90 9g 微型舵机常见规格与控制方式",
+      "index": 3
+    },
+    {
+      "id": "mechanical-transmission",
+      "parentId": "smart-trash-bin",
+      "label": "机械传动",
+      "summary": "把舵机的小角度旋转传到桶盖。",
+      "domain": "object",
+      "level": 1,
+      "function": "用连接点、推杆与铰链改变运动方向和作用位置，使桶盖抬起。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "safe",
+      "source": "人工整理：简化连杆机构与纸板桶盖原型观察",
+      "index": 4
+    },
+    {
+      "id": "power-system",
+      "parentId": "smart-trash-bin",
+      "label": "电源系统",
+      "summary": "向控制器、传感器与舵机提供稳定低压电能。",
+      "domain": "object",
+      "level": 1,
+      "function": "分配 5V 电源并建立公共地，缓冲舵机启动时的电流波动。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "guided",
+      "source": "ESP32 开发板供电说明、SG90 常见供电范围与低压电路实践",
+      "index": 5
+    },
+    {
+      "id": "bin-structure",
+      "parentId": "smart-trash-bin",
+      "label": "桶体结构",
+      "summary": "承载各系统并限定桶盖的运动路径。",
+      "domain": "object",
+      "level": 1,
+      "function": "为传感器、舵机和连杆提供安装位置，同时容纳垃圾并保护布线。",
+      "status": "observed",
+      "canExpand": true,
+      "buildability": "safe",
+      "source": "对常见翻盖垃圾桶和纸板教学模型的直接观察",
+      "index": 6
+    },
+    {
+      "id": "user-interaction",
+      "parentId": "smart-trash-bin",
+      "label": "用户交互",
+      "summary": "接收人的意图并反馈当前状态。",
+      "domain": "object",
+      "level": 1,
+      "function": "通过靠近、手动按键、指示灯和桶盖动作，让用户发出请求并理解系统状态。",
+      "status": "inferred",
+      "canExpand": true,
+      "buildability": "safe",
+      "source": "人工整理：基于原型演示流程与常见家电交互模式",
+      "index": 7
+    },
+    {
+      "id": "approach-event",
+      "parentId": "sensing-system",
+      "label": "手靠近",
+      "summary": "用户把手移入传感器的有效探测范围。",
+      "domain": "object",
+      "level": 2,
+      "function": "触发回波时间变化，是自动开盖链路的起点。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "现场可直接观察并通过串口距离读数复核",
+      "index": 1
+    },
+    {
+      "id": "distance-sensor",
+      "parentId": "sensing-system",
+      "label": "距离传感器",
+      "summary": "用超声波往返时间估算前方物体距离。",
+      "domain": "object",
+      "level": 2,
+      "function": "周期性发射短脉冲并测量回波持续时间，输出给控制器计算距离。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "guided",
+      "source": "HC-SR04 超声波测距模块通用数据手册",
+      "index": 2
+    },
+    {
+      "id": "detection-zone",
+      "parentId": "sensing-system",
+      "label": "探测区域",
+      "summary": "传感器前方能够稳定发现手部的空间。",
+      "domain": "object",
+      "level": 2,
+      "function": "通过安装角度与距离阈值限定哪些靠近动作会触发开盖。",
+      "status": "inferred",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "人工标定：以现场串口读数确定有效距离与盲区",
+      "index": 3
+    },
+    {
+      "id": "ultrasonic-transmitter",
+      "parentId": "distance-sensor",
+      "label": "超声波发射器",
+      "summary": "把电触发脉冲转换成超声波。",
+      "domain": "object",
+      "level": 3,
+      "function": "发出短促声波，让声波遇到手部后形成反射。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "not_recommended",
+      "source": "HC-SR04 模块功能框图；模块内部不建议拆装",
+      "index": 1
+    },
+    {
+      "id": "ultrasonic-receiver",
+      "parentId": "distance-sensor",
+      "label": "超声波接收器",
+      "summary": "接收从物体表面反射回来的超声波。",
+      "domain": "object",
+      "level": 3,
+      "function": "把微弱回波转换成模块内部可处理的电信号。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "not_recommended",
+      "source": "HC-SR04 模块功能框图；模块内部不建议拆装",
+      "index": 2
+    },
+    {
+      "id": "echo-timing",
+      "parentId": "distance-sensor",
+      "label": "回波计时电路",
+      "summary": "用 ECHO 高电平宽度表达声波往返时间。",
+      "domain": "object",
+      "level": 3,
+      "function": "整形接收信号并生成计时脉冲，供 ESP32 换算距离。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "not_recommended",
+      "source": "HC-SR04 时序图与接口说明",
+      "index": 3
+    },
+    {
+      "id": "controller-module",
+      "parentId": "control-system",
+      "label": "控制器",
+      "summary": "运行测距、判断与舵机控制程序。",
+      "domain": "object",
+      "level": 2,
+      "function": "协调输入采样、阈值判断、状态保持和 PWM 输出。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "guided",
+      "source": "ESP32 开发板技术资料与 Arduino API 文档",
+      "index": 1
+    },
+    {
+      "id": "distance-evaluation",
+      "parentId": "control-system",
+      "label": "距离判断",
+      "summary": "把连续距离读数转换成“靠近”或“离开”。",
+      "domain": "object",
+      "level": 2,
+      "function": "比较触发阈值，并用连续样本或迟滞减少偶发误触发。",
+      "status": "inferred",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "本案例程序结构：人工设计的阈值、连续样本与迟滞规则",
+      "index": 2
+    },
+    {
+      "id": "servo-command",
+      "parentId": "control-system",
+      "label": "舵机指令",
+      "summary": "用目标角度描述开盖或关盖动作。",
+      "domain": "object",
+      "level": 2,
+      "function": "把状态机结果转换成脉宽控制信号，并限制动作频率。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "guided",
+      "source": "SG90 常见 50Hz PWM 控制方式与本案例角度标定",
+      "index": 3
+    },
+    {
+      "id": "esp32-board",
+      "parentId": "controller-module",
+      "label": "ESP32 开发板",
+      "summary": "可编程的低压微控制器开发板。",
+      "domain": "object",
+      "level": 3,
+      "function": "执行程序、读取 GPIO 脉冲并生成舵机 PWM 信号。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "guided",
+      "source": "Espressif ESP32 系列数据手册与开发板引脚说明",
+      "index": 1
+    },
+    {
+      "id": "sensor-input-pin",
+      "parentId": "controller-module",
+      "label": "传感输入引脚",
+      "summary": "接收经过分压后的 ECHO 脉冲。",
+      "domain": "object",
+      "level": 3,
+      "function": "测量高电平持续时间，并保护 ESP32 仅接收约 3.3V 逻辑电平。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "guided",
+      "source": "ESP32 GPIO 电气规格与 HC-SR04 ECHO 5V 电平说明",
+      "index": 2
+    },
+    {
+      "id": "servo-output-pin",
+      "parentId": "controller-module",
+      "label": "舵机输出引脚",
+      "summary": "输出控制舵机目标角度的 PWM 波形。",
+      "domain": "object",
+      "level": 3,
+      "function": "只传递控制信号，不直接为舵机电机供电。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "guided",
+      "source": "ESP32 PWM/LEDC 文档与 SG90 信号线接口说明",
+      "index": 3
+    },
+    {
+      "id": "servo",
+      "parentId": "actuation-system",
+      "label": "SG90 舵机",
+      "summary": "按控制脉冲转到指定角度的微型执行器。",
+      "domain": "object",
+      "level": 2,
+      "function": "把 5V 电能转换成受控旋转，并通过输出轴带动连杆。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "guided",
+      "source": "SG90 9g 微型舵机常见规格与接口说明",
+      "index": 1
+    },
+    {
+      "id": "servo-mount",
+      "parentId": "actuation-system",
+      "label": "舵机支架",
+      "summary": "固定舵机机身，防止它随输出轴一起移动。",
+      "domain": "object",
+      "level": 2,
+      "function": "把反作用力传给桶体，使输出轴的旋转真正用于抬盖。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "纸板模型装配观察与常见舵机安装方式",
+      "index": 2
+    },
+    {
+      "id": "servo-control-board",
+      "parentId": "servo",
+      "label": "舵机控制电路",
+      "summary": "比较目标位置与当前位置并驱动电机。",
+      "domain": "object",
+      "level": 3,
+      "function": "解释 PWM 脉宽，闭环调节电机转向与停止位置。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "not_recommended",
+      "source": "通用模拟舵机工作原理；成品舵机内部不建议拆装",
+      "index": 1
+    },
+    {
+      "id": "servo-motor",
+      "parentId": "servo",
+      "label": "直流电机",
+      "summary": "产生高速、小扭矩旋转。",
+      "domain": "object",
+      "level": 3,
+      "function": "把电能转换成机械转动，为齿轮组提供输入。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "not_recommended",
+      "source": "通用微型舵机内部结构说明",
+      "index": 2
+    },
+    {
+      "id": "servo-gear-train",
+      "parentId": "servo",
+      "label": "减速齿轮组",
+      "summary": "降低转速并提高输出扭矩。",
+      "domain": "object",
+      "level": 3,
+      "function": "把电机高速转动转换成适合抬盖的较慢旋转。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "not_recommended",
+      "source": "SG90 类微型舵机常见齿轮结构说明",
+      "index": 3
+    },
+    {
+      "id": "servo-horn",
+      "parentId": "servo",
+      "label": "舵盘",
+      "summary": "连接舵机输出轴与外部连杆。",
+      "domain": "object",
+      "level": 3,
+      "function": "提供偏离轴心的连接孔，把转动转成推杆位移。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "SG90 随附舵盘与原型装配观察",
+      "index": 4
+    },
+    {
+      "id": "linkage",
+      "parentId": "mechanical-transmission",
+      "label": "连杆",
+      "summary": "在舵机与桶盖之间传递推拉运动。",
+      "domain": "object",
+      "level": 2,
+      "function": "把舵盘圆弧运动转换为桶盖连接点的升降位移。",
+      "status": "verified",
+      "canExpand": true,
+      "buildability": "safe",
+      "source": "简化四杆/推杆机构原理与纸板原型验证",
+      "index": 1
+    },
+    {
+      "id": "lid-hinge",
+      "parentId": "mechanical-transmission",
+      "label": "桶盖铰链",
+      "summary": "限定桶盖绕固定轴转动。",
+      "domain": "object",
+      "level": 2,
+      "function": "支撑桶盖并把杂乱位移约束成稳定的开合运动。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "常见翻盖结构与模型铰链直接观察",
+      "index": 2
+    },
+    {
+      "id": "motion-limit",
+      "parentId": "mechanical-transmission",
+      "label": "运动限位",
+      "summary": "阻止桶盖和舵机超过安全行程。",
+      "domain": "object",
+      "level": 2,
+      "function": "通过程序角度与实体止挡避免连杆卡死、舵机堵转或夹手。",
+      "status": "inferred",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "原型调试记录与舵机堵转风险分析",
+      "index": 3
+    },
+    {
+      "id": "servo-joint",
+      "parentId": "linkage",
+      "label": "舵盘连接点",
+      "summary": "把连杆固定在舵盘偏心孔上。",
+      "domain": "object",
+      "level": 3,
+      "function": "决定推杆行程；离轴心越远，位移通常越大但可用力矩越小。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "连杆几何关系与模型孔位标定",
+      "index": 1
+    },
+    {
+      "id": "pushrod",
+      "parentId": "linkage",
+      "label": "推拉杆",
+      "summary": "在两个连接点之间传递拉力和推力。",
+      "domain": "object",
+      "level": 3,
+      "function": "保持足够刚度，将舵盘位移传到桶盖而不过度弯曲。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "冰棒棍、硬铁丝或扎带制作的教学模型观察",
+      "index": 2
+    },
+    {
+      "id": "lid-joint",
+      "parentId": "linkage",
+      "label": "桶盖连接点",
+      "summary": "把推杆运动施加到桶盖上。",
+      "domain": "object",
+      "level": 3,
+      "function": "选择合适力臂，让舵机能抬起桶盖且不与铰链干涉。",
+      "status": "inferred",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "依据模型桶盖重量和铰链位置人工标定",
+      "index": 3
+    },
+    {
+      "id": "five-volt-source",
+      "parentId": "power-system",
+      "label": "5V 低压电源",
+      "summary": "为舵机提供足够电流，并为系统提供低压输入。",
+      "domain": "object",
+      "level": 2,
+      "function": "把安全的成品 USB 电源输出送到供电总线；不涉及市电拆装。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "guided",
+      "source": "成品 5V/2A USB 电源铭牌与舵机供电需求",
+      "index": 1
+    },
+    {
+      "id": "power-bus",
+      "parentId": "power-system",
+      "label": "供电总线",
+      "summary": "把 5V 与地分配到各模块。",
+      "domain": "object",
+      "level": 2,
+      "function": "通过面包板电源轨形成清晰的正极与地线连接。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "guided",
+      "source": "本案例面包板接线图与通电前万用表检查",
+      "index": 2
+    },
+    {
+      "id": "bulk-capacitor",
+      "parentId": "power-system",
+      "label": "缓冲电容",
+      "summary": "缓解舵机启动造成的瞬时电压下降。",
+      "domain": "object",
+      "level": 2,
+      "function": "在舵机附近短时补充电流，减少 ESP32 复位和传感器误读。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "guided",
+      "source": "低压电源去耦常规实践；本案例建议 470–1000µF 电解电容",
+      "index": 3
+    },
+    {
+      "id": "power-switch",
+      "parentId": "power-system",
+      "label": "电源开关",
+      "summary": "允许调试者快速切断舵机电源。",
+      "domain": "object",
+      "level": 2,
+      "function": "在调整连杆或发现堵转时立即停止机械动作。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "低压原型安全操作要求",
+      "index": 4
+    },
+    {
+      "id": "common-ground",
+      "parentId": "power-system",
+      "label": "公共地",
+      "summary": "为控制信号建立共同的电压参考。",
+      "domain": "object",
+      "level": 2,
+      "function": "连接 ESP32、传感器与舵机电源的 GND，避免 PWM 和 ECHO 信号失去参考。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "guided",
+      "source": "数字电路接口与多电源低压系统的公共参考原则",
+      "index": 5
+    },
+    {
+      "id": "lid",
+      "parentId": "bin-structure",
+      "label": "桶盖",
+      "summary": "被连杆抬起或放下的活动部件。",
+      "domain": "object",
+      "level": 2,
+      "function": "在关闭时遮挡桶口，在打开时为投放物留出空间。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "翻盖垃圾桶与纸板模型直接观察",
+      "index": 1
+    },
+    {
+      "id": "bin-body",
+      "parentId": "bin-structure",
+      "label": "桶身",
+      "summary": "容纳垃圾并承载上部机构。",
+      "domain": "object",
+      "level": 2,
+      "function": "提供稳定外壳和铰链基座，隔开垃圾与电子元件。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "常见家用垃圾桶结构直接观察",
+      "index": 2
+    },
+    {
+      "id": "base-platform",
+      "parentId": "bin-structure",
+      "label": "原型底板",
+      "summary": "固定面包板、电源线与控制板。",
+      "domain": "object",
+      "level": 2,
+      "function": "避免松散导线进入桶体，并让演示装置可重复移动。",
+      "status": "inferred",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "本案例纸板/泡沫板教学模型设计",
+      "index": 3
+    },
+    {
+      "id": "sensor-window",
+      "parentId": "bin-structure",
+      "label": "传感器开口",
+      "summary": "让发射与接收端无遮挡地朝向用户。",
+      "domain": "object",
+      "level": 2,
+      "function": "固定传感器朝向并避免桶盖遮挡探测锥。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "原型安装观察与传感器视场标定",
+      "index": 4
+    },
+    {
+      "id": "wiring-channel",
+      "parentId": "bin-structure",
+      "label": "走线通道",
+      "summary": "把导线固定在机械运动区域之外。",
+      "domain": "object",
+      "level": 2,
+      "function": "防止连杆夹线、导线被垃圾拉扯或接头意外松脱。",
+      "status": "inferred",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "低压原型布线与运动机构隔离的安全实践",
+      "index": 5
+    },
+    {
+      "id": "status-led",
+      "parentId": "user-interaction",
+      "label": "状态指示灯",
+      "summary": "显示待机、检测到目标或故障状态。",
+      "domain": "object",
+      "level": 2,
+      "function": "在机械机构未安装时也能验证控制逻辑，便于分阶段调试。",
+      "status": "verified",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "本案例分阶段测试方案；可使用开发板板载 LED",
+      "index": 1
+    },
+    {
+      "id": "manual-open-button",
+      "parentId": "user-interaction",
+      "label": "手动开盖键",
+      "summary": "跳过距离判断，直接发出一次开盖请求。",
+      "domain": "object",
+      "level": 2,
+      "function": "用于维修测试、传感器异常时的后备操作和演示对照。",
+      "status": "inferred",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "人工整理：可选的人机交互与维护功能",
+      "index": 2
+    },
+    {
+      "id": "open-close-feedback",
+      "parentId": "user-interaction",
+      "label": "开合反馈",
+      "summary": "用户通过桶盖位置和声音判断动作是否完成。",
+      "domain": "object",
+      "level": 2,
+      "function": "形成可见、可听的结果反馈；本原型不额外安装位置传感器。",
+      "status": "observed",
+      "canExpand": false,
+      "buildability": "safe",
+      "source": "对原型桶盖动作的直接观察",
+      "index": 3
+    }
+  ],
+  "edges": [
+    {
+      "id": "contains-root-sensing",
+      "source": "smart-trash-bin",
+      "target": "sensing-system",
+      "relation": "contains",
+      "explanation": "自动垃圾桶包含负责发现靠近动作的感知系统。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-root-control",
+      "source": "smart-trash-bin",
+      "target": "control-system",
+      "relation": "contains",
+      "explanation": "自动垃圾桶包含负责决策与时序管理的控制系统。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-root-actuation",
+      "source": "smart-trash-bin",
+      "target": "actuation-system",
+      "relation": "contains",
+      "explanation": "自动垃圾桶包含把命令转成旋转的执行系统。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-root-mechanical",
+      "source": "smart-trash-bin",
+      "target": "mechanical-transmission",
+      "relation": "contains",
+      "explanation": "自动垃圾桶包含把旋转传到桶盖的机械传动。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-root-power",
+      "source": "smart-trash-bin",
+      "target": "power-system",
+      "relation": "contains",
+      "explanation": "自动垃圾桶包含低压供电与电流缓冲系统。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-root-bin",
+      "source": "smart-trash-bin",
+      "target": "bin-structure",
+      "relation": "contains",
+      "explanation": "自动垃圾桶包含承载机构与垃圾的桶体结构。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-root-ui",
+      "source": "smart-trash-bin",
+      "target": "user-interaction",
+      "relation": "contains",
+      "explanation": "自动垃圾桶包含接收意图并反馈状态的用户交互。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-sensing-event",
+      "source": "sensing-system",
+      "target": "approach-event",
+      "relation": "contains",
+      "explanation": "感知层把手部靠近作为需要识别的输入事件。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-sensing-sensor",
+      "source": "sensing-system",
+      "target": "distance-sensor",
+      "relation": "contains",
+      "explanation": "感知系统使用距离传感器执行测量。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-sensing-zone",
+      "source": "sensing-system",
+      "target": "detection-zone",
+      "relation": "contains",
+      "explanation": "安装位置与软件阈值共同定义有效探测区域。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-sensor-transmitter",
+      "source": "distance-sensor",
+      "target": "ultrasonic-transmitter",
+      "relation": "contains",
+      "explanation": "距离传感器包含发出声波的换能器。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-sensor-receiver",
+      "source": "distance-sensor",
+      "target": "ultrasonic-receiver",
+      "relation": "contains",
+      "explanation": "距离传感器包含接收反射声波的换能器。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-sensor-timing",
+      "source": "distance-sensor",
+      "target": "echo-timing",
+      "relation": "contains",
+      "explanation": "距离传感器包含把回波转换成计时脉冲的电路。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-control-controller",
+      "source": "control-system",
+      "target": "controller-module",
+      "relation": "contains",
+      "explanation": "控制系统以可编程控制器为核心。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-control-evaluation",
+      "source": "control-system",
+      "target": "distance-evaluation",
+      "relation": "contains",
+      "explanation": "控制系统包含过滤读数并判断靠近的逻辑。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-control-command",
+      "source": "control-system",
+      "target": "servo-command",
+      "relation": "contains",
+      "explanation": "控制系统包含生成舵机角度命令的输出逻辑。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-controller-board",
+      "source": "controller-module",
+      "target": "esp32-board",
+      "relation": "contains",
+      "explanation": "控制器模块以 ESP32 开发板执行程序。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-controller-input",
+      "source": "controller-module",
+      "target": "sensor-input-pin",
+      "relation": "contains",
+      "explanation": "控制器通过输入引脚读取 ECHO 脉冲。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-controller-output",
+      "source": "controller-module",
+      "target": "servo-output-pin",
+      "relation": "contains",
+      "explanation": "控制器通过输出引脚发送舵机 PWM。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-actuation-servo",
+      "source": "actuation-system",
+      "target": "servo",
+      "relation": "contains",
+      "explanation": "执行系统使用 SG90 舵机产生受控旋转。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-actuation-mount",
+      "source": "actuation-system",
+      "target": "servo-mount",
+      "relation": "contains",
+      "explanation": "执行系统需要支架固定舵机机身。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-servo-control",
+      "source": "servo",
+      "target": "servo-control-board",
+      "relation": "contains",
+      "explanation": "舵机内部控制电路解释 PWM 并调节位置。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-servo-motor",
+      "source": "servo",
+      "target": "servo-motor",
+      "relation": "contains",
+      "explanation": "舵机内部电机产生初始旋转。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-servo-gears",
+      "source": "servo",
+      "target": "servo-gear-train",
+      "relation": "contains",
+      "explanation": "舵机内部齿轮组降低转速并提高扭矩。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-servo-horn",
+      "source": "servo",
+      "target": "servo-horn",
+      "relation": "contains",
+      "explanation": "舵盘把舵机输出轴连接到外部机构。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-mechanical-linkage",
+      "source": "mechanical-transmission",
+      "target": "linkage",
+      "relation": "contains",
+      "explanation": "机械传动以推拉连杆传递位移。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-mechanical-hinge",
+      "source": "mechanical-transmission",
+      "target": "lid-hinge",
+      "relation": "contains",
+      "explanation": "铰链限定桶盖只能绕固定轴转动。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-mechanical-limit",
+      "source": "mechanical-transmission",
+      "target": "motion-limit",
+      "relation": "contains",
+      "explanation": "机械传动需要限位避免过度运动。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-linkage-servo-joint",
+      "source": "linkage",
+      "target": "servo-joint",
+      "relation": "contains",
+      "explanation": "连杆在舵盘侧通过偏心连接点接收位移。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-linkage-pushrod",
+      "source": "linkage",
+      "target": "pushrod",
+      "relation": "contains",
+      "explanation": "推拉杆在两个连接点之间传力。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-linkage-lid-joint",
+      "source": "linkage",
+      "target": "lid-joint",
+      "relation": "contains",
+      "explanation": "连杆在桶盖侧通过连接点输出位移。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-power-source",
+      "source": "power-system",
+      "target": "five-volt-source",
+      "relation": "contains",
+      "explanation": "电源系统使用成品 5V 低压电源。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-power-bus",
+      "source": "power-system",
+      "target": "power-bus",
+      "relation": "contains",
+      "explanation": "供电总线分配正极与地线。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-power-capacitor",
+      "source": "power-system",
+      "target": "bulk-capacitor",
+      "relation": "contains",
+      "explanation": "缓冲电容帮助应对舵机瞬时负载。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-power-switch",
+      "source": "power-system",
+      "target": "power-switch",
+      "relation": "contains",
+      "explanation": "电源开关提供快速断电手段。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-power-ground",
+      "source": "power-system",
+      "target": "common-ground",
+      "relation": "contains",
+      "explanation": "公共地为各模块信号建立统一参考。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-bin-lid",
+      "source": "bin-structure",
+      "target": "lid",
+      "relation": "contains",
+      "explanation": "桶体结构包含可活动的桶盖。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-bin-body",
+      "source": "bin-structure",
+      "target": "bin-body",
+      "relation": "contains",
+      "explanation": "桶身形成主要容器和承载外壳。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-bin-base",
+      "source": "bin-structure",
+      "target": "base-platform",
+      "relation": "contains",
+      "explanation": "教学原型以底板固定电子部件。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-bin-window",
+      "source": "bin-structure",
+      "target": "sensor-window",
+      "relation": "contains",
+      "explanation": "传感器开口让测距端无遮挡朝向用户。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-bin-wiring",
+      "source": "bin-structure",
+      "target": "wiring-channel",
+      "relation": "contains",
+      "explanation": "走线通道把导线与垃圾和运动机构隔开。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-ui-led",
+      "source": "user-interaction",
+      "target": "status-led",
+      "relation": "contains",
+      "explanation": "状态灯为控制结果提供可见反馈。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-ui-button",
+      "source": "user-interaction",
+      "target": "manual-open-button",
+      "relation": "contains",
+      "explanation": "手动按键提供独立于距离传感的开盖输入。",
+      "views": ["structure"]
+    },
+    {
+      "id": "contains-ui-feedback",
+      "source": "user-interaction",
+      "target": "open-close-feedback",
+      "relation": "contains",
+      "explanation": "桶盖的可见位置构成动作结果反馈。",
+      "views": ["structure"]
+    },
+    {
+      "id": "chain-approach-to-sensor",
+      "source": "approach-event",
+      "target": "distance-sensor",
+      "relation": "signals",
+      "explanation": "手进入探测区会改变超声波回波时间，相当于向感知系统提供了“有人靠近”的输入。",
+      "views": ["signal", "causal"]
+    },
+    {
+      "id": "chain-sensor-to-controller",
+      "source": "distance-sensor",
+      "target": "controller-module",
+      "relation": "signals",
+      "explanation": "距离传感器用 ECHO 脉冲宽度把测距结果传给控制器。",
+      "views": ["signal", "causal"]
+    },
+    {
+      "id": "chain-controller-to-servo",
+      "source": "controller-module",
+      "target": "servo",
+      "relation": "controls",
+      "explanation": "控制器判断距离低于阈值后，用 PWM 命令舵机转向开盖角度。",
+      "views": ["signal", "causal"]
+    },
+    {
+      "id": "chain-servo-to-linkage",
+      "source": "servo",
+      "target": "linkage",
+      "relation": "moves",
+      "explanation": "舵机输出轴和舵盘转动，带动连杆产生推拉位移。",
+      "views": ["signal", "energy", "causal"]
+    },
+    {
+      "id": "chain-linkage-to-lid",
+      "source": "linkage",
+      "target": "lid",
+      "relation": "moves",
+      "explanation": "连杆把位移传到桶盖连接点，使桶盖绕铰链打开。",
+      "views": ["signal", "energy", "causal"]
+    },
+    {
+      "id": "sensor-senses-approach",
+      "source": "distance-sensor",
+      "target": "approach-event",
+      "relation": "senses",
+      "explanation": "距离传感器通过回波变化感知手部靠近事件。",
+      "views": ["signal"]
+    },
+    {
+      "id": "zone-controls-event",
+      "source": "detection-zone",
+      "target": "approach-event",
+      "relation": "controls",
+      "explanation": "只有进入经过标定的探测区域，靠近动作才会被视为有效触发。",
+      "views": ["causal"]
+    },
+    {
+      "id": "transmitter-to-receiver",
+      "source": "ultrasonic-transmitter",
+      "target": "ultrasonic-receiver",
+      "relation": "transfers_energy",
+      "explanation": "发射器产生的声能经手部反射后到达接收器。",
+      "views": ["energy", "signal", "causal"]
+    },
+    {
+      "id": "receiver-to-timing",
+      "source": "ultrasonic-receiver",
+      "target": "echo-timing",
+      "relation": "signals",
+      "explanation": "接收器把回波转换成电信号，计时电路据此结束 ECHO 脉冲。",
+      "views": ["signal", "causal"]
+    },
+    {
+      "id": "timing-to-input",
+      "source": "echo-timing",
+      "target": "sensor-input-pin",
+      "relation": "signals",
+      "explanation": "计时电路将声波往返时间编码为输入引脚上的高电平宽度。",
+      "views": ["signal"]
+    },
+    {
+      "id": "input-to-evaluation",
+      "source": "sensor-input-pin",
+      "target": "distance-evaluation",
+      "relation": "signals",
+      "explanation": "输入引脚测得脉宽后，程序换算距离并交给判断逻辑。",
+      "views": ["signal", "causal"]
+    },
+    {
+      "id": "evaluation-to-command",
+      "source": "distance-evaluation",
+      "target": "servo-command",
+      "relation": "controls",
+      "explanation": "连续近距离样本满足条件时，判断逻辑切换到开盖状态并生成舵机指令。",
+      "views": ["signal", "causal"]
+    },
+    {
+      "id": "command-to-output",
+      "source": "servo-command",
+      "target": "servo-output-pin",
+      "relation": "signals",
+      "explanation": "开盖或关盖目标角度被编码成输出引脚上的 PWM 脉冲。",
+      "views": ["signal"]
+    },
+    {
+      "id": "output-to-servo-control",
+      "source": "servo-output-pin",
+      "target": "servo-control-board",
+      "relation": "signals",
+      "explanation": "舵机信号线把 PWM 脉冲送入内部控制电路。",
+      "views": ["signal"]
+    },
+    {
+      "id": "servo-control-to-motor",
+      "source": "servo-control-board",
+      "target": "servo-motor",
+      "relation": "controls",
+      "explanation": "舵机控制电路根据位置误差决定电机转向和通电时间。",
+      "views": ["signal", "energy", "causal"]
+    },
+    {
+      "id": "motor-to-gears",
+      "source": "servo-motor",
+      "target": "servo-gear-train",
+      "relation": "transfers_energy",
+      "explanation": "电机把旋转机械能输入减速齿轮组。",
+      "views": ["energy", "causal"]
+    },
+    {
+      "id": "gears-to-horn",
+      "source": "servo-gear-train",
+      "target": "servo-horn",
+      "relation": "moves",
+      "explanation": "齿轮组以较低转速和较高扭矩带动舵盘。",
+      "views": ["energy", "causal"]
+    },
+    {
+      "id": "horn-to-servo-joint",
+      "source": "servo-horn",
+      "target": "servo-joint",
+      "relation": "moves",
+      "explanation": "舵盘旋转使偏心连接点沿圆弧移动。",
+      "views": ["energy", "causal"]
+    },
+    {
+      "id": "servo-joint-to-pushrod",
+      "source": "servo-joint",
+      "target": "pushrod",
+      "relation": "moves",
+      "explanation": "偏心连接点推动或拉动推杆。",
+      "views": ["energy", "causal"]
+    },
+    {
+      "id": "pushrod-to-lid-joint",
+      "source": "pushrod",
+      "target": "lid-joint",
+      "relation": "transfers_energy",
+      "explanation": "推杆把机械力传递到桶盖连接点。",
+      "views": ["energy", "causal"]
+    },
+    {
+      "id": "lid-joint-to-lid",
+      "source": "lid-joint",
+      "target": "lid",
+      "relation": "moves",
+      "explanation": "连接点对桶盖施力，使其绕铰链抬起或落下。",
+      "views": ["energy", "causal"]
+    },
+    {
+      "id": "hinge-supports-lid",
+      "source": "lid-hinge",
+      "target": "lid",
+      "relation": "supports",
+      "explanation": "铰链承受桶盖重量并限定转轴位置。",
+      "views": ["structure", "energy"]
+    },
+    {
+      "id": "limit-controls-lid",
+      "source": "motion-limit",
+      "target": "lid",
+      "relation": "controls",
+      "explanation": "软件角度和实体止挡共同限制桶盖最大开合范围。",
+      "views": ["causal"]
+    },
+    {
+      "id": "mount-supports-servo",
+      "source": "servo-mount",
+      "target": "servo",
+      "relation": "supports",
+      "explanation": "舵机支架把反作用力传到桶体，保持舵机位置稳定。",
+      "views": ["structure", "energy"]
+    },
+    {
+      "id": "body-supports-hinge",
+      "source": "bin-body",
+      "target": "lid-hinge",
+      "relation": "supports",
+      "explanation": "桶身提供稳定的铰链安装基座。",
+      "views": ["structure"]
+    },
+    {
+      "id": "base-supports-electronics",
+      "source": "base-platform",
+      "target": "controller-module",
+      "relation": "supports",
+      "explanation": "底板固定控制器与面包板，减少移动时的接触不良。",
+      "views": ["structure"]
+    },
+    {
+      "id": "window-supports-sensor",
+      "source": "sensor-window",
+      "target": "distance-sensor",
+      "relation": "supports",
+      "explanation": "传感器开口固定测距模块，并保持发射、接收端无遮挡。",
+      "views": ["structure"]
+    },
+    {
+      "id": "wiring-protects-power",
+      "source": "wiring-channel",
+      "target": "power-bus",
+      "relation": "protects",
+      "explanation": "走线通道让供电线远离桶内垃圾和活动连杆。",
+      "views": ["structure", "energy"]
+    },
+    {
+      "id": "source-powers-bus",
+      "source": "five-volt-source",
+      "target": "power-bus",
+      "relation": "powers",
+      "explanation": "成品 5V 电源向面包板供电总线输入低压电能。",
+      "views": ["energy"]
+    },
+    {
+      "id": "switch-controls-bus",
+      "source": "power-switch",
+      "target": "power-bus",
+      "relation": "controls",
+      "explanation": "开关决定舵机供电总线是否接通，便于紧急停止。",
+      "views": ["energy", "causal"]
+    },
+    {
+      "id": "bus-powers-controller",
+      "source": "power-bus",
+      "target": "controller-module",
+      "relation": "powers",
+      "explanation": "供电总线为控制器提供工作电能；调试时也可由 USB 单独供电。",
+      "views": ["energy"]
+    },
+    {
+      "id": "bus-powers-sensor",
+      "source": "power-bus",
+      "target": "distance-sensor",
+      "relation": "powers",
+      "explanation": "供电总线为距离传感器提供 5V 电源。",
+      "views": ["energy"]
+    },
+    {
+      "id": "bus-powers-servo",
+      "source": "power-bus",
+      "target": "servo",
+      "relation": "powers",
+      "explanation": "供电总线为舵机电机提供独立、足量的 5V 电流。",
+      "views": ["energy"]
+    },
+    {
+      "id": "capacitor-to-servo",
+      "source": "bulk-capacitor",
+      "target": "servo",
+      "relation": "transfers_energy",
+      "explanation": "舵机启动瞬间，缓冲电容可短时释放电能减轻电压下跌。",
+      "views": ["energy", "causal"]
+    },
+    {
+      "id": "controller-depends-ground",
+      "source": "controller-module",
+      "target": "common-ground",
+      "relation": "depends_on",
+      "explanation": "控制器必须与传感器和舵机共享地参考，才能正确解释逻辑电平。",
+      "views": ["signal", "energy", "causal"]
+    },
+    {
+      "id": "sensor-depends-ground",
+      "source": "distance-sensor",
+      "target": "common-ground",
+      "relation": "depends_on",
+      "explanation": "距离传感器的 TRIG 和 ECHO 信号需要公共地作为参考。",
+      "views": ["signal", "energy"]
+    },
+    {
+      "id": "servo-depends-ground",
+      "source": "servo",
+      "target": "common-ground",
+      "relation": "depends_on",
+      "explanation": "即使舵机使用独立 5V 电源，其信号地也必须与 ESP32 相连。",
+      "views": ["signal", "energy"]
+    },
+    {
+      "id": "button-to-controller",
+      "source": "manual-open-button",
+      "target": "controller-module",
+      "relation": "signals",
+      "explanation": "按键向控制器发送人工开盖请求，用于测试或后备操作。",
+      "views": ["signal", "causal"]
+    },
+    {
+      "id": "controller-to-led",
+      "source": "controller-module",
+      "target": "status-led",
+      "relation": "controls",
+      "explanation": "控制器用指示灯显示待机、触发和错误状态。",
+      "views": ["signal", "causal"]
+    },
+    {
+      "id": "lid-to-feedback",
+      "source": "lid",
+      "target": "open-close-feedback",
+      "relation": "signals",
+      "explanation": "桶盖的位置和动作声音让用户确认系统是否完成开合。",
+      "views": ["signal", "causal"]
+    }
+  ]
+}

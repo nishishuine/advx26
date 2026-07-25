@@ -406,13 +406,12 @@ body::after{
 "use strict";
 const $=s=>document.querySelector(s);
 
-/* ── 默认书目：这两本；演示用 ×7 重复（共 14 本看排布效果） ── */
+/* ── 默认书目：这两本；其余靠用户自行上传 .bookpack 文件 ── */
 const DEFAULT_BOOKS=[
   {file:"百年孤独.bookpack",            open:"index.html"},
   {file:"生命中不能承受之轻.bookpack",   open:"index.html?pack="+encodeURIComponent("生命中不能承受之轻.bookpack")},
 ];
-const DEMO_REPEAT=7;
-const SHELF_BOOKS=Array.from({length:DEMO_REPEAT},()=>DEFAULT_BOOKS).flat();
+const SHELF_BOOKS=DEFAULT_BOOKS;
 
 const DEFAULT_TOTAL=20;
 

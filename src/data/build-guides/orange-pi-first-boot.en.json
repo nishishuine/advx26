@@ -1,0 +1,463 @@
+{
+  "caseId": "orange-pi-first-boot",
+  "title": "From a blank TF card to your first Orange Pi webpage",
+  "summary": "Follow one default path that is designed to work: prepare the system on an internet-connected Windows computer, use a card reader to flash it to a TF card, safely eject the card, insert it into the powered-off Orange Pi 3B, and finally use Ethernet, SSH, and Nginx to publish your first webpage.",
+  "difficulty": "Suitable for complete beginners",
+  "totalTime": "About 60–120 minutes, depending on download speed and first-time troubleshooting",
+  "budget": "If you already have an Orange Pi 3B, you only need a TF card, card reader, Ethernet cable, and suitable power supply",
+  "tools": [
+    "Windows computer",
+    "Armbian Imager",
+    "Router administration page",
+    "Windows PowerShell",
+    "Windows web browser"
+  ],
+  "programFlow": [
+    "Gather and identify the hardware",
+    "Download the flashing tool on the computer",
+    "Identify only the TF card",
+    "Flash and safely eject the card",
+    "Insert the card while powered off, then boot",
+    "Find the IP address",
+    "Log in with SSH for the first time",
+    "Verify the system",
+    "Install Nginx",
+    "Verify the result in a browser"
+  ],
+  "parts": [
+    {
+      "id": "orange-pi-3b",
+      "name": "Orange Pi 3B",
+      "quantity": "1 board",
+      "purpose": "Runs Linux and Nginx",
+      "estimate": "Confirm that the board printing or package clearly says Orange Pi 3B",
+      "status": "core"
+    },
+    {
+      "id": "tf-card",
+      "name": "microSD / TF card",
+      "quantity": "1 card",
+      "purpose": "Stores the system and serves as the boot drive",
+      "estimate": "At least 16 GB and Class 10; prefer A1 from a reliable brand; 32 GB is recommended",
+      "status": "core"
+    },
+    {
+      "id": "card-reader",
+      "name": "TF card reader",
+      "quantity": "1",
+      "purpose": "Connects the TF card to the Windows computer",
+      "estimate": "Must be detected reliably by Windows",
+      "status": "core"
+    },
+    {
+      "id": "power",
+      "name": "Type-C 5V/3A power supply and reliable cable",
+      "quantity": "1 set",
+      "purpose": "Provides stable power to the Orange Pi 3B",
+      "estimate": "Check the printed output rating; do not assume that any phone charger is suitable",
+      "status": "core"
+    },
+    {
+      "id": "ethernet",
+      "name": "Ethernet cable and router",
+      "quantity": "1 set",
+      "purpose": "Lets the board obtain a local-network IP address automatically",
+      "estimate": "The computer must be able to open the administration page of the same router",
+      "status": "core"
+    },
+    {
+      "id": "display",
+      "name": "HDMI display and USB keyboard",
+      "quantity": "Optional",
+      "purpose": "Provides a backup troubleshooting route if you cannot find the IP address",
+      "estimate": "The default route does not depend on them",
+      "status": "support"
+    }
+  ],
+  "connections": [
+    {
+      "from": "Windows",
+      "to": "TF card",
+      "via": "Card reader and Armbian Imager",
+      "reason": "Writes a complete, bootable Linux system to the card"
+    },
+    {
+      "from": "TF card",
+      "to": "Orange Pi 3B",
+      "via": "On-board microSD slot",
+      "reason": "The board loads the system from the TF card after power-on"
+    },
+    {
+      "from": "Orange Pi 3B",
+      "to": "Router",
+      "via": "Ethernet cable",
+      "reason": "Obtains an IP address automatically through DHCP so Windows can connect"
+    },
+    {
+      "from": "Windows",
+      "to": "Orange Pi 3B",
+      "via": "SSH and HTTP",
+      "reason": "Controls the board remotely and displays the webpage it serves in a browser"
+    }
+  ],
+  "steps": [
+    {
+      "id": "prepare-kit",
+      "phase": "Prepare",
+      "title": "Put these 6 items on the table first",
+      "purpose": "Use the pictures above to identify every item before you begin. For a complete beginner, the most common blockers are a missing card reader, the wrong card slot, or powering the board too early—not the code.",
+      "deviceState": "TF card: disconnected | Card reader: disconnected | Orange Pi: fully powered off | Power supply: disconnected",
+      "prerequisites": [
+        "The Orange Pi is not powered on.",
+        "The Windows computer can access the internet normally.",
+        "You can read the output rating printed on the power adapter."
+      ],
+      "instructions": [
+        "Use the pictures above to lay out all 6 items: a Windows computer, Orange Pi 3B, TF card of at least 16 GB, card reader, Ethernet cable, and Type-C power supply with its cable.",
+        "Confirm that the board model is exactly Orange Pi 3B—not Orange Pi 3, 3 LTS, Zero 3, or another similarly named model.",
+        "Pick up the TF card and card reader: the TF card is a fingernail-sized storage card, and the card reader is the adapter that connects this small card to a computer USB port.",
+        "Read the power adapter label and confirm that it can provide a stable 5V/3A Type-C output. If you are unsure, do not power the board yet.",
+        "Confirm that the Windows computer and the router you will later connect to the Orange Pi are on the same local network.",
+        "Do not connect power during this stage, and do not insert the TF card into an Orange Pi that is already powered on."
+      ],
+      "successCriteria": [
+        "The board model has been confirmed as Orange Pi 3B.",
+        "The TF card, card reader, Ethernet cable, and 5V/3A Type-C power supply are within reach.",
+        "You can open the router's connected-device page, or you have prepared an HDMI display and USB keyboard as the backup route for finding the IP address."
+      ],
+      "troubleshooting": [
+        "You have a card reader but no TF card: obtain a Class 10 TF card of at least 16 GB.",
+        "The power adapter label does not list a 5V/3A output: replace it with a suitable supply before continuing.",
+        "You cannot access the router administration page: prepare an HDMI display and USB keyboard as the backup method for finding the IP address."
+      ],
+      "duration": "5–10 minutes"
+    },
+    {
+      "id": "choose-image",
+      "phase": "Prepare the system",
+      "title": "Download the flashing tool and choose the system on the computer",
+      "purpose": "This entire step happens only on the Windows computer. You are downloading a flashing tool, which will later write a complete Linux system to the TF card; you are not manually copying an installer onto the card.",
+      "deviceState": "TF card: still disconnected | Card reader: still disconnected | Orange Pi: fully powered off | Computer: online and connected to power",
+      "prerequisites": [
+        "The Windows computer is connected to the internet.",
+        "The board you are using is an Orange Pi 3B.",
+        "The computer has at least 4 GB of free disk space and will not sleep or have its lid closed during flashing."
+      ],
+      "instructions": [
+        "Open the official Armbian board page for Orange Pi 3B: https://armbian.com/boards/orangepi3b .",
+        "Click Download with Armbian Imager, then download and install the Windows version of Armbian Imager.",
+        "Open Armbian Imager and select the Orange Pi 3B board.",
+        "Choose Debian 13 Trixie Minimal (CLI). If several kernels are offered, prefer the Minimal image with vendor 6.1.",
+        "Check again that the interface says Orange Pi 3B and Minimal (CLI). Do not start the final write yet.",
+        "Keep the computer online and connected to power. Imager may continue downloading the image while flashing later, so do not let the computer sleep or close its lid."
+      ],
+      "successCriteria": [
+        "Armbian Imager is open.",
+        "The selected board is shown as Orange Pi 3B.",
+        "The selected image is Debian Minimal (CLI), not a desktop image or an image for another board."
+      ],
+      "troubleshooting": [
+        "The page has changed since this guide was written: continue to use only the Orange Pi 3B board page and choose the current Debian Minimal (CLI) image offered for this board.",
+        "Imager cannot download the image: first confirm that the Windows browser can open https://armbian.com/boards/orangepi3b .",
+        "You only see Orange Pi 3 or Orange Pi 3 LTS: do not select either one; they are different boards."
+      ],
+      "duration": "10–30 minutes"
+    },
+    {
+      "id": "identify-card",
+      "phase": "Connect the TF card",
+      "title": "Identify only this TF card; do not write to it yet",
+      "purpose": "First let Windows detect the TF card and identify it by capacity. Separating “identify the card” from “erase and write” greatly reduces the risk of selecting the computer's internal drive or another removable drive.",
+      "deviceState": "TF card: inserted in the card reader | Card reader: connected to the computer | Orange Pi: fully powered off and connected to nothing",
+      "prerequisites": [
+        "Any existing files on the TF card have been backed up because the next step will erase the entire card.",
+        "You know the card's rated capacity, such as 32 GB.",
+        "Other USB drives, external drives, and unrelated card readers have been unplugged from the computer."
+      ],
+      "instructions": [
+        "Insert the TF card into the card reader first and make sure the small card is firmly seated.",
+        "Then connect the card reader to a USB port on the Windows computer. Do not connect the reader to the Orange Pi.",
+        "Wait 5–15 seconds for a new device to appear in Windows.",
+        "Look at the newly listed capacity in Armbian Imager's target-device list. A 32 GB card usually appears as about 29 GB; this is normal.",
+        "Only identify which device is this TF card. Do not click Flash or begin writing yet.",
+        "If more than one candidate appears, the capacity is completely wrong, or you cannot identify exactly one device, stop immediately and unplug the reader."
+      ],
+      "successCriteria": [
+        "The TF card is in the card reader, and the reader is connected to Windows.",
+        "You can identify exactly one target device in Imager as this TF card.",
+        "The target device's displayed capacity roughly matches the card's rated capacity."
+      ],
+      "troubleshooting": [
+        "Windows shows no new device: try another USB port, then reseat both the TF card and the reader.",
+        "A 32 GB card shows only about 29 GB: this is a normal difference in capacity calculation.",
+        "Two candidate drives appear: exit everything, leave only this TF card connected, and try again. If you are still unsure, do not continue."
+      ],
+      "duration": "2–5 minutes"
+    },
+    {
+      "id": "flash-card",
+      "phase": "Write the system",
+      "title": "Flash the system to the confirmed TF card",
+      "purpose": "This is the only step in the entire process that erases a storage device. Imager downloads and writes the complete system block by block, then verifies it; this is not a normal file copy.",
+      "deviceState": "TF card: still in the card reader | Card reader: still connected to the computer | Orange Pi: fully powered off and not involved in flashing",
+      "prerequisites": [
+        "Existing files on the TF card have been backed up, and the entire card may be erased.",
+        "In the previous step, you uniquely identified this TF card and its approximate capacity.",
+        "Armbian Imager has the Debian Minimal image for Orange Pi 3B selected."
+      ],
+      "instructions": [
+        "Perform one final three-part check: the board is Orange Pi 3B, the image is Debian Minimal, and the target is the TF card you uniquely identified with roughly the expected capacity.",
+        "After all three are correct, click Flash. Keep the computer online and connected to power, and do not close the lid or let it sleep.",
+        "If Windows says that a disk must be formatted while writing or verifying, always choose Cancel. Windows does not recognize the Linux partitions; this message does not mean the flash failed.",
+        "Wait until both Flash and Verify explicitly succeed. Do not unplug the reader or operate the Orange Pi during this process.",
+        "Close Armbian Imager.",
+        "Use the Windows system tray to safely eject the card reader. Unplug it only after Windows says it is safe to remove.",
+        "Only then remove the TF card from the reader."
+      ],
+      "successCriteria": [
+        "Imager explicitly reports that writing is complete.",
+        "Imager's Verify stage succeeds.",
+        "The TF card has been ejected through Windows “Safely Remove Hardware.”"
+      ],
+      "troubleshooting": [
+        "The target capacity does not match: stop immediately and do not attempt to write.",
+        "Verification fails: reconnect the reader and try once more. If it still fails, replace the TF card or reader first.",
+        "Windows asks to format the disk: choose Cancel; do not format the Linux partitions that were just written."
+      ],
+      "duration": "15–30 minutes"
+    },
+    {
+      "id": "first-boot",
+      "phase": "Boot",
+      "title": "After safe ejection, insert the card while powered off and then boot",
+      "purpose": "Flashing on the computer is now finished. Only now move the TF card from the reader to the Orange Pi so the board can boot from it and obtain an IP address through Ethernet.",
+      "deviceState": "TF card: removed from the reader and ready for the board | Card reader: unplugged | Orange Pi: fully powered off | Power supply: connected last",
+      "prerequisites": [
+        "The TF card has completed Flash, Verify, and Windows safe ejection.",
+        "The Orange Pi is fully powered off.",
+        "The other end of the Ethernet cable is connected to a working router."
+      ],
+      "instructions": [
+        "Confirm that the TF card is out of the reader and no Type-C power cable is connected to the Orange Pi.",
+        "Turn the board over and find the TF card slot along the right edge. Gently push the card in following the slot's orientation. Stop immediately if you feel strong resistance; never force it.",
+        "Connect one end of the Ethernet cable to the Orange Pi and the other to a LAN port on the router. Do not use a port labeled WAN or Internet.",
+        "If you want an HDMI display and USB keyboard available for backup troubleshooting, connect them now. You can also continue without them.",
+        "Connect the stable Type-C 5V/3A power supply last.",
+        "Wait at least 2 minutes. The first boot expands the filesystem, so do not repeatedly disconnect power just because nothing appears to happen yet."
+      ],
+      "successCriteria": [
+        "The board's power or status indicator responds.",
+        "The Ethernet-port lights turn on or blink.",
+        "The board has remained powered continuously for at least 2 minutes after its first power-on."
+      ],
+      "troubleshooting": [
+        "No indicator lights at all: disconnect power, then recheck the wall outlet, 5V/3A supply, Type-C cable, and correct power port.",
+        "The board repeatedly restarts or the light pattern keeps repeating: unstable power or a failed TF-card write are the most common causes.",
+        "HDMI is connected but the screen is black: a Minimal image has no desktop, which is normal. Continue by finding the IP address through the router."
+      ],
+      "duration": "3–5 minutes"
+    },
+    {
+      "id": "find-ip",
+      "phase": "Connect",
+      "title": "Confirm both devices are on the same local network, then find the Orange Pi IP",
+      "purpose": "Find the router first, then find the Orange Pi through the router. You only need to save one local IPv4 address made of four groups of numbers; later SSH commands will insert it automatically.",
+      "deviceState": "TF card: installed in Orange Pi | Orange Pi: remains powered on | Ethernet: connected to a router LAN port | Computer: connected to the same router",
+      "mentalModel": "Think of the router as a front desk and the computer and Orange Pi as guests. The router gives each device a local IP address, and SSH uses that address to find the Orange Pi. The computer may use Wi-Fi while the Orange Pi uses Ethernet. They do not need a direct cable between them; both only need to be on the same ordinary home network.",
+      "terminalExample": {
+        "title": "The important PowerShell output looks like this",
+        "lines": [
+          "PS C:\\Users\\you> ipconfig",
+          "IPv4 Address. . . . . . . . . . . : 192.168.1.20",
+          "Default Gateway . . . . . . . . . : 192.168.1.1",
+          "PS C:\\Users\\you> Test-NetConnection {{IP}} -Port 22",
+          "RemotePort       : 22",
+          "TcpTestSucceeded : True"
+        ],
+        "note": "You can continue when the final TcpTestSucceeded value is True. PingSucceeded may be False without affecting this tutorial."
+      },
+      "prerequisites": [
+        "The Orange Pi has been connected to the router by Ethernet and booting for at least 2 minutes.",
+        "Windows is connected to the same router through ordinary Wi-Fi or LAN. Do not use a guest Wi-Fi network that isolates devices.",
+        "Prefer the router's “connected devices” page. If you cannot access it, you must have an HDMI display and USB keyboard ready for the backup route."
+      ],
+      "instructions": [
+        "Press the Windows key, type PowerShell, and open “Windows PowerShell” or “Terminal (PowerShell).” The window should show a prompt similar to PS C:\\Users\\your-name>.",
+        "Run `ipconfig` in PowerShell. Look only at the “Wireless LAN adapter Wi-Fi” or “Ethernet adapter” that is currently in use, and note its “Default Gateway,” such as 192.168.1.1. This is the router address, not the Orange Pi address.",
+        "Enter the default gateway, for example http://192.168.1.1, in the Windows browser's address bar. Sign in with the account provided on the router label, in its manual, or in its management app. Do not reset the router just because you forgot the password.",
+        "Open the list named “Connected devices,” “Online devices,” “LAN clients,” or “DHCP clients.” Look for a new wired device named orangepi, armbian, or debian. If no name is shown, look for the wired device that appeared most recently.",
+        "Copy only that device's IPv4 address, such as 192.168.1.123, 10.0.0.25, or 172.16.0.8. Do not copy a colon-separated MAC address or an IPv6 address beginning with fe80::.",
+        "Enter the IPv4 address in the Orange Pi IP field above. Enter only numbers and dots—no http://, port, slash, or spaces.",
+        "Run `Test-NetConnection {{IP}} -Port 22` in PowerShell. It may take a few seconds; look only at the final TcpTestSucceeded line.",
+        "TcpTestSucceeded : True means Windows can reach the Orange Pi SSH service, so you can continue.",
+        "Backup route B (use only if you cannot enter the router administration page): power the board off, connect an HDMI display and USB keyboard, then power it on. Complete the local first-time setup shown on screen, log in, run `hostname -I`, and enter the first local IPv4 address shown above.",
+        "If you used backup route B, remember the ordinary username you created. In the next step, log in directly as that user; do not use root or the default password 1234 again."
+      ],
+      "successCriteria": [
+        "You obtained a valid local IPv4 address from the router list or `hostname -I` and entered it correctly on this page.",
+        "You can distinguish the Orange Pi IPv4 address from the router's default gateway and from a MAC address.",
+        "`Test-NetConnection {{IP}} -Port 22` returns TcpTestSucceeded : True."
+      ],
+      "troubleshooting": [
+        "ipconfig shows no default gateway: Windows is not properly connected to the router. Fix the computer's Wi-Fi or Ethernet connection first.",
+        "No new device appears in the router list: wait another 2–3 minutes and refresh. Check the Ethernet cable and port lights at both the Orange Pi and the router LAN port.",
+        "Windows is using guest Wi-Fi: some routers isolate guest devices. Switch to the normal home Wi-Fi network and retry.",
+        "The IP field reports an invalid format: remove http://, :22, slashes, and spaces, leaving only four groups of numbers such as 192.168.1.123.",
+        "TcpTestSucceeded is False: wait 60 seconds and test again. If it still fails, recheck the IP address, Ethernet cable, board boot state, and flashing result.",
+        "You do not have the router administration password: do not reset the router. Use the HDMI display and USB keyboard backup route instead."
+      ],
+      "duration": "10–20 minutes"
+    },
+    {
+      "id": "first-ssh",
+      "phase": "Connect",
+      "title": "Log in remotely with SSH for the first time and verify the login",
+      "purpose": "SSH is like moving the Orange Pi's keyboard and screen into Windows PowerShell. First confirm that Windows has SSH, then choose the correct login branch based on whether you used the HDMI backup route.",
+      "deviceState": "Orange Pi: remains powered and online | Computer: connects remotely only through the local network | Do not move the TF card or disconnect power",
+      "mentalModel": "Commands entered after the PS C:\\Users\\…> prompt run on Windows. After login succeeds, the prompt changes to root@orangepi…# or your-username@orangepi…$. Only from that point do commands run on the Orange Pi. Password entry displays no characters or asterisks at all; this is a normal security feature.",
+      "terminalExample": {
+        "title": "What changes on screen during the first SSH login",
+        "lines": [
+          "PS C:\\Users\\you> ssh root@{{IP}}",
+          "Are you sure you want to continue connecting (yes/no)? yes",
+          "root@{{IP}}'s password:",
+          "root@orangepi3b:~# exit",
+          "PS C:\\Users\\you> ssh {{USER}}@{{IP}}",
+          "{{USER}}@orangepi3b:~$ whoami",
+          "{{USER}}"
+        ],
+        "note": "If you already completed first-time setup on an HDMI display, start directly from the ssh ordinary-username@IP line. Do not use root / 1234 again."
+      },
+      "prerequisites": [
+        "The previous step saved a valid Orange Pi IPv4 address, and the port 22 test returned True.",
+        "You know whether you are on branch A (first-time setup has never been completed) or branch B (first-time setup was completed over HDMI).",
+        "The ordinary username starts with a lowercase letter and contains only lowercase letters and numbers after that, such as jie1, and it has been entered in the field above."
+      ],
+      "instructions": [
+        "Make sure you are still in Windows PowerShell and run `ssh -V`. If you see OpenSSH_for_Windows and a version number, the client is available.",
+        "Branch A (first-time setup has never been completed over HDMI): run `ssh root@{{IP}}`. When Are you sure you want to continue connecting first appears, check that the displayed IP is correct, then type yes and press Enter.",
+        "Branch A: when root@IP's password: appears, enter the default password 1234 and press Enter. The screen shows no characters or asterisks while you type; this is normal. Enter it only once.",
+        "Branch A: when prompted, enter a new root password and repeat it. The first-time setup may interpret keys using the US QWERTY layout, so initially use a password of at least 10 characters that contains letters and numbers and is easy to type correctly.",
+        "Branch A: when asked to create an ordinary user, enter {{USER}}, set that user's password, and repeat it. Choose Bash for the shell, then complete the name, language, or time-zone prompts until a prompt similar to root@orangepi3b:~# appears.",
+        "Branch A: run `exit` and confirm that the prompt returns to Windows PS C:\\Users\\…>. Then run `ssh {{USER}}@{{IP}}` and log in with the ordinary-user password you just created.",
+        "Branch B (first-time setup has already been completed over HDMI): skip root, 1234, and user creation. Run `ssh {{USER}}@{{IP}}` directly and enter the ordinary-user password created during the HDMI setup.",
+        "After the ordinary-user login succeeds, run `whoami`; the only expected output is {{USER}}. Then run `hostname` and `hostname -I` to confirm that the device name and IP belong to this Orange Pi.",
+        "Continue only after you see a prompt like {{USER}}@orangepi…$ ending in a dollar sign. Do not continue routine work at a root # prompt."
+      ],
+      "successCriteria": [
+        "`ssh -V` displays an OpenSSH_for_Windows version.",
+        "Branch A has replaced the default password and created an ordinary user, or branch B is using the ordinary user created over HDMI.",
+        "`ssh {{USER}}@{{IP}}` opens a command line, and `whoami` outputs only {{USER}}.",
+        "`hostname -I` includes the {{IP}} address saved on this page."
+      ],
+      "troubleshooting": [
+        "ssh -V is reported as an unknown command: open Windows Settings → Apps → Optional features, install OpenSSH Client, then close and reopen PowerShell.",
+        "Connection timed out: return to the previous step and recheck the IP address, Ethernet cable, whether the board is online, and whether Windows is on guest Wi-Fi.",
+        "Connection refused: the system is online but SSH may not be ready. Wait 1–2 minutes and retry. If it keeps failing, recheck the image and boot process.",
+        "Permission denied: if you followed the HDMI branch, use the ordinary username and the password you created; use root / 1234 only for a completely new first login. Stop and verify after three failed attempts instead of guessing repeatedly.",
+        "Nothing appears while entering the password: this is normal. Do not paste it repeatedly; type it accurately once and press Enter.",
+        "REMOTE HOST IDENTIFICATION HAS CHANGED: only after confirming that you just reflashed this board, run `ssh-keygen -R {{IP}}` to remove the old fingerprint, then reconnect.",
+        "Symbols appear on unexpected keys during first-time setup: the keyboard may be interpreted as US QWERTY. Use a password made of letters and numbers first, then change it after setup."
+      ],
+      "duration": "10–20 minutes"
+    },
+    {
+      "id": "verify-system",
+      "phase": "Verify the system",
+      "title": "Confirm that the system, storage, and network all work",
+      "purpose": "Use a few read-only commands to confirm that you logged into the correct device, then refresh the package list in preparation for installing Nginx.",
+      "deviceState": "Orange Pi: remains powered and online | PowerShell: logged in as the ordinary user | Browser: not needed yet",
+      "prerequisites": [
+        "The current PowerShell session is logged in through SSH as the ordinary user {{USER}}.",
+        "The Orange Pi has stable power and network connectivity.",
+        "The terminal prompt is waiting for a command."
+      ],
+      "instructions": [
+        "Check the system version: `cat /etc/os-release`.",
+        "Check the current IP address: `hostname -I`.",
+        "Check free space on the TF card's root partition: `df -h /`.",
+        "Confirm that the system detects about 2 GB of memory: `free -h`.",
+        "Refresh the list of installable software: `sudo apt update`. When asked for a password, use the password for {{USER}}."
+      ],
+      "successCriteria": [
+        "`cat /etc/os-release` displays Debian or Armbian information.",
+        "`hostname -I` includes the {{IP}} address saved earlier.",
+        "`df -h /` and `free -h` display storage and memory information normally.",
+        "`sudo apt update` returns to the command prompt without an error beginning with E:."
+      ],
+      "troubleshooting": [
+        "sudo says the user is not in sudoers: ordinary-user creation did not finish correctly. Recheck the first root-login setup process.",
+        "apt update cannot resolve domain names: the Orange Pi is on the local network but cannot reach the internet. Check the router's internet connection.",
+        "The root partition has almost no free space: stop the installation and first check the TF card capacity and whether image expansion completed."
+      ],
+      "duration": "3–8 minutes"
+    },
+    {
+      "id": "install-nginx",
+      "phase": "Publish the webpage",
+      "title": "Install Nginx and write the first webpage",
+      "purpose": "Make the Orange Pi actually serve a webpage on the local network instead of stopping at “login works.”",
+      "deviceState": "Orange Pi: remains powered and online | PowerShell: still in the SSH session | Windows browser: used in the next step",
+      "prerequisites": [
+        "`sudo apt update` completed successfully.",
+        "You are still in the Orange Pi SSH terminal.",
+        "The Orange Pi has stable power and network connectivity."
+      ],
+      "instructions": [
+        "Install Nginx: `sudo apt install nginx -y`.",
+        "Start it now and enable it at boot: `sudo systemctl enable --now nginx`.",
+        "Check the service: `systemctl is-active nginx`. The normal result is a single line containing active.",
+        "Write a clearly recognizable home page: `echo '<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><title>Orange Pi 3B</title><body style=\"font-family:sans-serif;max-width:680px;margin:80px auto\"><h1>Orange Pi 3B is running</h1><p>This is my first hardware Linux web page.</p></body></html>' | sudo tee /var/www/html/index.html`.",
+        "Check the webpage response locally on the board: `curl http://127.0.0.1`."
+      ],
+      "successCriteria": [
+        "`systemctl is-active nginx` returns active.",
+        "`curl http://127.0.0.1` shows Orange Pi 3B is running.",
+        "Nginx is enabled to start automatically at boot."
+      ],
+      "troubleshooting": [
+        "apt cannot find nginx: run `sudo apt update` again and check the network.",
+        "The service is not active: run `sudo systemctl status nginx --no-pager` and read the error at the bottom.",
+        "Writing the home page reports Permission denied: confirm that you used the complete command and did not remove `sudo tee`."
+      ],
+      "duration": "5–10 minutes"
+    },
+    {
+      "id": "browser-acceptance",
+      "phase": "Finish",
+      "title": "Complete the final verification in a Windows browser",
+      "purpose": "Access the webpage from another device to prove that the entire TF card, boot, network, SSH, Linux, and Nginx path works from end to end.",
+      "deviceState": "Orange Pi: remains powered and online | Windows: browser opens the board IP | Decide whether to shut down only after verification",
+      "prerequisites": [
+        "Nginx status is active.",
+        "Windows and the Orange Pi are still on the same local network.",
+        "The device IP {{IP}} has not changed."
+      ],
+      "instructions": [
+        "Open http://{{IP}} in the Windows browser.",
+        "Confirm that the page title or body contains “Orange Pi 3B is running.”",
+        "Return to PowerShell and run `ssh {{USER}}@{{IP}}` once more to confirm that reconnection still works.",
+        "If you want to shut down now, run `sudo poweroff` through SSH, wait about 20–30 seconds, and confirm that the activity light stops changing before unplugging Type-C power. The power light may remain on for some boards; this is normal."
+      ],
+      "successCriteria": [
+        "The Windows browser can open http://{{IP}} .",
+        "The page displays “Orange Pi 3B is running.”",
+        "Windows can log in again through `ssh {{USER}}@{{IP}}`.",
+        "You know to run `sudo poweroff` before physically disconnecting power."
+      ],
+      "troubleshooting": [
+        "Local curl works but Windows cannot open the page: confirm that the URL uses http rather than https and that both devices are on the same local network.",
+        "The browser still shows the default Nginx page: force-refresh it, then run the home-page writing command again.",
+        "The IP address changed: return to the router device list, find the new address, and update the IP saved on this page."
+      ],
+      "duration": "3–5 minutes"
+    }
+  ],
+  "safety": [
+    "Only the TF-card flashing step erases data. Stop immediately if you are not certain of the target capacity.",
+    "Do not insert or remove the TF card while the Orange Pi is powered on.",
+    "Use a stable 5V/3A Type-C power supply.",
+    "While the system is running, execute sudo poweroff and wait for shutdown before disconnecting power.",
+    "Do not connect motors, servos, or unverified jumper wires to GPIO."
+  ]
+}

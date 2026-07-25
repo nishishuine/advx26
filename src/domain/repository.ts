@@ -1,5 +1,9 @@
 import orangePiFirstBoot from "../data/cases/orange-pi-first-boot.json";
+import orangePiFirstBootEn from "../data/cases/orange-pi-first-boot.en.json";
+import orangePiFirstBootMn from "../data/cases/orange-pi-first-boot.mn.json";
 import orangePiFirstBootGuide from "../data/build-guides/orange-pi-first-boot.json";
+import orangePiFirstBootGuideEn from "../data/build-guides/orange-pi-first-boot.en.json";
+import orangePiFirstBootGuideMn from "../data/build-guides/orange-pi-first-boot.mn.json";
 import { getNode, validateBuildGuide, validateWorldCase } from "./graph";
 import type {
   BuildGuide,
@@ -7,6 +11,7 @@ import type {
   GraphNode,
   WorldCase,
 } from "./types";
+import type { Locale } from "../i18n/LanguageProvider";
 
 export interface GraphRepository {
   listCases(): Promise<CaseSummary[]>;
@@ -15,15 +20,47 @@ export interface GraphRepository {
   getBuildGuide(caseId: string): Promise<BuildGuide | null>;
 }
 
-const worldCases = [orangePiFirstBoot as WorldCase].map(validateWorldCase);
+type RepositoryData = {
+  worldCases: WorldCase[];
+  guides: BuildGuide[];
+  missingCase: (caseId: string) => string;
+};
 
-const guides = [orangePiFirstBootGuide as BuildGuide].map(
-  validateBuildGuide,
-);
+function createRepositoryData(
+  worldCase: unknown,
+  guide: unknown,
+  missingCase: (caseId: string) => string,
+): RepositoryData {
+  return {
+    worldCases: [validateWorldCase(worldCase as WorldCase)],
+    guides: [validateBuildGuide(guide as BuildGuide)],
+    missingCase,
+  };
+}
+
+const localizedData: Record<Locale, RepositoryData> = {
+  zh: createRepositoryData(
+    orangePiFirstBoot,
+    orangePiFirstBootGuide,
+    (caseId) => `找不到案例：${caseId}`,
+  ),
+  en: createRepositoryData(
+    orangePiFirstBootEn,
+    orangePiFirstBootGuideEn,
+    (caseId) => `Project not found: ${caseId}`,
+  ),
+  mn: createRepositoryData(
+    orangePiFirstBootMn,
+    orangePiFirstBootGuideMn,
+    (caseId) => `Төсөл олдсонгүй: ${caseId}`,
+  ),
+};
 
 export class StaticGraphRepository implements GraphRepository {
+  constructor(private readonly data: RepositoryData = localizedData.zh) {}
+
   async listCases(): Promise<CaseSummary[]> {
-    return worldCases.map(
+    return this.data.worldCases.map(
       ({
         id,
         title,
@@ -49,9 +86,11 @@ export class StaticGraphRepository implements GraphRepository {
   }
 
   async getCase(caseId: string): Promise<WorldCase> {
-    const worldCase = worldCases.find((candidate) => candidate.id === caseId);
+    const worldCase = this.data.worldCases.find(
+      (candidate) => candidate.id === caseId,
+    );
     if (!worldCase) {
-      throw new Error(`找不到案例：${caseId}`);
+      throw new Error(this.data.missingCase(caseId));
     }
     return worldCase;
   }
@@ -62,8 +101,20 @@ export class StaticGraphRepository implements GraphRepository {
   }
 
   async getBuildGuide(caseId: string): Promise<BuildGuide | null> {
-    return guides.find((guide) => guide.caseId === caseId) ?? null;
+    return (
+      this.data.guides.find((guide) => guide.caseId === caseId) ?? null
+    );
   }
 }
 
-export const graphRepository = new StaticGraphRepository();
+const repositories: Record<Locale, StaticGraphRepository> = {
+  zh: new StaticGraphRepository(localizedData.zh),
+  en: new StaticGraphRepository(localizedData.en),
+  mn: new StaticGraphRepository(localizedData.mn),
+};
+
+export function getGraphRepository(locale: Locale) {
+  return repositories[locale];
+}
+
+export const graphRepository = repositories.zh;

@@ -17,6 +17,8 @@ import {
   Square,
   X,
 } from "lucide-react";
+import { LanguageSwitch } from "../components/LanguageSwitch";
+import { useLanguage } from "../i18n/LanguageProvider";
 
 type Attachment = {
   file: File;
@@ -53,6 +55,7 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { locale, text } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const attachmentRef = useRef<Attachment | null>(null);
@@ -80,11 +83,23 @@ export function HomePage() {
 
   const attachFile = (file?: File) => {
     if (!file || !file.type.startsWith("image/")) {
-      setHint("请选择 JPG、PNG 或 WebP 图片");
+      setHint(
+        text(
+          "请选择 JPG、PNG 或 WebP 图片",
+          "Choose a JPG, PNG, or WebP image",
+          "JPG, PNG эсвэл WebP зураг сонгоно уу",
+        ),
+      );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      setHint("图片请控制在 10 MB 以内");
+      setHint(
+        text(
+          "图片请控制在 10 MB 以内",
+          "Keep the image under 10 MB",
+          "Зургийн хэмжээ 10 MB-аас бага байх ёстой",
+        ),
+      );
       return;
     }
 
@@ -98,7 +113,13 @@ export function HomePage() {
     };
     attachmentRef.current = nextAttachment;
     setAttachment(nextAttachment);
-    setHint("图片已添加，补充一句描述会更准确");
+    setHint(
+      text(
+        "图片已添加，补充一句描述会更准确",
+        "Image added. A short description will improve the result.",
+        "Зураг нэмэгдлээ. Богино тайлбар нэмбэл үр дүн илүү зөв болно.",
+      ),
+    );
   };
 
   const removeAttachment = () => {
@@ -115,7 +136,13 @@ export function HomePage() {
     if (listening) {
       recognitionRef.current?.stop();
       setListening(false);
-      setHint("语音输入已结束");
+      setHint(
+        text(
+          "语音输入已结束",
+          "Voice input ended",
+          "Дуу хоолойн оролт дууслаа",
+        ),
+      );
       return;
     }
 
@@ -127,12 +154,19 @@ export function HomePage() {
       speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
 
     if (!Recognition) {
-      setHint("当前浏览器不支持语音转文字，请直接输入文字");
+      setHint(
+        text(
+          "当前浏览器不支持语音转文字，请直接输入文字",
+          "This browser does not support speech-to-text. Please type instead.",
+          "Энэ хөтөч дууг бичвэр болгохгүй байна. Гараар бичнэ үү.",
+        ),
+      );
       return;
     }
 
     const recognition = new Recognition();
-    recognition.lang = "zh-CN";
+    recognition.lang =
+      locale === "zh" ? "zh-CN" : locale === "en" ? "en-US" : "mn-MN";
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.onresult = (event) => {
@@ -147,14 +181,28 @@ export function HomePage() {
       setPrompt((current) =>
         [current.trim(), transcript.trim()].filter(Boolean).join(" "),
       );
-      setHint("语音已转换为文字");
+      setHint(
+        text(
+          "语音已转换为文字",
+          "Speech converted to text",
+          "Дуу хоолойг бичвэр болголоо",
+        ),
+      );
     };
     recognition.onerror = (event) => {
       setListening(false);
       setHint(
         event.error === "not-allowed"
-          ? "需要麦克风权限才能使用语音输入"
-          : "没有听清，请再试一次",
+          ? text(
+              "需要麦克风权限才能使用语音输入",
+              "Microphone permission is required for voice input",
+              "Дуу хоолойгоор оруулахын тулд микрофоны зөвшөөрөл хэрэгтэй",
+            )
+          : text(
+              "没有听清，请再试一次",
+              "I could not hear that clearly. Please try again.",
+              "Тод сонсогдсонгүй. Дахин оролдоно уу.",
+            ),
       );
     };
     recognition.onend = () => {
@@ -165,11 +213,17 @@ export function HomePage() {
     try {
       recognition.start();
       setListening(true);
-      setHint("正在聆听…");
+      setHint(text("正在聆听…", "Listening…", "Сонсож байна…"));
     } catch {
       recognitionRef.current = null;
       setListening(false);
-      setHint("语音输入暂时不可用，请直接输入文字");
+      setHint(
+        text(
+          "语音输入暂时不可用，请直接输入文字",
+          "Voice input is temporarily unavailable. Please type instead.",
+          "Дуу хоолойн оролт түр ажиллахгүй байна. Гараар бичнэ үү.",
+        ),
+      );
     }
   };
 
@@ -182,8 +236,16 @@ export function HomePage() {
     setSubmitting(true);
     setHint(
       intent === "build"
-        ? "正在准备从零到一的执行教程…"
-        : "正在整理主要部分与关系…",
+        ? text(
+            "正在准备从零到一的执行教程…",
+            "Preparing the complete build guide…",
+            "Эхнээс нь дуустал бүтээх зааврыг бэлдэж байна…",
+          )
+        : text(
+            "正在整理主要部分与关系…",
+            "Organizing the main parts and relationships…",
+            "Үндсэн хэсэг ба холбоосыг эмхэлж байна…",
+          ),
     );
 
     const caseId = "orange-pi-first-boot";
@@ -234,10 +296,15 @@ export function HomePage() {
         <Link
           className="chat-home__wordmark"
           to="/"
-          aria-label="manifold 首页"
+          aria-label={text(
+            "manifold 首页",
+            "manifold home",
+            "manifold нүүр хуудас",
+          )}
         >
           manifold
         </Link>
+        <LanguageSwitch />
       </header>
 
       <section className="chat-home__stage">
@@ -247,14 +314,30 @@ export function HomePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h1>你要做些什么</h1>
-          <p>描述你的目标，从理解到亲手实现。</p>
+          <h1>
+            {text(
+              "你要做些什么",
+              "What would you like to do?",
+              "Та юу хийхийг хүсэж байна?",
+            )}
+          </h1>
+          <p>
+            {text(
+              "描述你的目标，从理解到亲手实现。",
+              "Describe your goal—from understanding it to making it yourself.",
+              "Зорилгоо бичээрэй — ойлгохоос эхлээд өөрийн гараар бүтээх хүртэл.",
+            )}
+          </p>
         </motion.div>
 
         <motion.div
           className="intent-picker"
           role="group"
-          aria-label="选择目标"
+          aria-label={text(
+            "选择目标",
+            "Choose a goal",
+            "Зорилгоо сонгох",
+          )}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.04 }}
@@ -266,8 +349,16 @@ export function HomePage() {
             onClick={() => setIntent("learn")}
             disabled={submitting}
           >
-            <strong>拆开</strong>
-            <span>看主要部分与关系</span>
+            <strong>
+              {text("拆开", "Explore", "Задлан ойлгох")}
+            </strong>
+            <span>
+              {text(
+                "看主要部分与关系",
+                "See the main parts and relationships",
+                "Үндсэн хэсэг ба холбоосыг харах",
+              )}
+            </span>
           </button>
           <button
             type="button"
@@ -276,8 +367,14 @@ export function HomePage() {
             onClick={() => setIntent("build")}
             disabled={submitting}
           >
-            <strong>打造</strong>
-            <span>跟着教程从零做到一</span>
+            <strong>{text("打造", "Build", "Бүтээх")}</strong>
+            <span>
+              {text(
+                "跟着教程从零做到一",
+                "Follow a complete, start-to-finish guide",
+                "Эхнээс нь дуустал зааврыг дагах",
+              )}
+            </span>
           </button>
         </motion.div>
 
@@ -307,18 +404,33 @@ export function HomePage() {
           {dragging && (
             <div className="conversation-composer__drop">
               <ImageIcon size={20} />
-              松开以添加图片
+              {text(
+                "松开以添加图片",
+                "Drop to add the image",
+                "Зургийг нэмэхийн тулд тавина уу",
+              )}
             </div>
           )}
 
           {attachment && (
             <figure className="chat-attachment" title={attachment.file.name}>
-              <img src={attachment.url} alt="已添加图片的本地预览" />
+              <img
+                src={attachment.url}
+                alt={text(
+                  "已添加图片的本地预览",
+                  "Preview of the attached image",
+                  "Хавсаргасан зургийн урьдчилсан харагдац",
+                )}
+              />
               <button
                 type="button"
                 onClick={removeAttachment}
                 disabled={submitting}
-                aria-label="移除图片"
+                aria-label={text(
+                  "移除图片",
+                  "Remove image",
+                  "Зургийг хасах",
+                )}
               >
                 <X size={14} />
               </button>
@@ -337,17 +449,37 @@ export function HomePage() {
             }}
             placeholder={
               attachment
-                ? "你想从这张图片里弄懂什么？"
+                ? text(
+                    "你想从这张图片里弄懂什么？",
+                    "What do you want to understand from this image?",
+                    "Энэ зургаас юуг ойлгохыг хүсэж байна?",
+                  )
                 : intent === "build"
-                  ? "描述你想亲手做出来的东西…"
-                  : "描述你想拆开理解的东西…"
+                  ? text(
+                      "描述你想亲手做出来的东西…",
+                      "Describe what you want to build…",
+                      "Өөрийн гараар бүтээх зүйлээ тайлбарлана уу…",
+                    )
+                  : text(
+                      "描述你想拆开理解的东西…",
+                      "Describe what you want to understand…",
+                      "Задлан ойлгох зүйлээ тайлбарлана уу…",
+                    )
             }
             rows={1}
             maxLength={500}
             aria-label={
               intent === "build"
-                ? "描述想要打造的对象"
-                : "描述想要拆解的对象"
+                ? text(
+                    "描述想要打造的对象",
+                    "Describe what you want to build",
+                    "Бүтээх зүйлээ тайлбарлах",
+                  )
+                : text(
+                    "描述想要拆解的对象",
+                    "Describe what you want to explore",
+                    "Задлан ойлгох зүйлээ тайлбарлах",
+                  )
             }
             aria-describedby={hint ? "composer-status" : undefined}
           />
@@ -359,8 +491,12 @@ export function HomePage() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={submitting}
-                aria-label="上传图片"
-                title="上传图片"
+                aria-label={text(
+                  "上传图片",
+                  "Upload image",
+                  "Зураг оруулах",
+                )}
+                title={text("上传图片", "Upload image", "Зураг оруулах")}
               >
                 <ImageIcon size={18} />
               </button>
@@ -369,8 +505,32 @@ export function HomePage() {
                 type="button"
                 onClick={toggleVoiceInput}
                 disabled={submitting}
-                aria-label={listening ? "停止语音输入" : "开始语音输入"}
-                title={listening ? "停止语音输入" : "语音输入"}
+                aria-label={
+                  listening
+                    ? text(
+                        "停止语音输入",
+                        "Stop voice input",
+                        "Дуу хоолойн оролтыг зогсоох",
+                      )
+                    : text(
+                        "开始语音输入",
+                        "Start voice input",
+                        "Дуу хоолойгоор оруулж эхлэх",
+                      )
+                }
+                title={
+                  listening
+                    ? text(
+                        "停止语音输入",
+                        "Stop voice input",
+                        "Дуу хоолойн оролтыг зогсоох",
+                      )
+                    : text(
+                        "语音输入",
+                        "Voice input",
+                        "Дуу хоолойн оролт",
+                      )
+                }
                 aria-pressed={listening}
               >
                 {listening ? <Square size={14} /> : <AudioLines size={18} />}
@@ -390,10 +550,26 @@ export function HomePage() {
               disabled={!canSubmit || submitting}
               aria-label={
                 intent === "build"
-                  ? "确认并开始打造"
-                  : "确认并生成关系图"
+                  ? text(
+                      "确认并开始打造",
+                      "Confirm and start building",
+                      "Баталгаажуулаад бүтээж эхлэх",
+                    )
+                  : text(
+                      "确认并生成关系图",
+                      "Confirm and generate the relationship map",
+                      "Баталгаажуулаад холбоосын зураг үүсгэх",
+                    )
               }
-              title={intent === "build" ? "开始打造" : "生成关系图"}
+              title={
+                intent === "build"
+                  ? text("开始打造", "Start building", "Бүтээж эхлэх")
+                  : text(
+                      "生成关系图",
+                      "Generate relationship map",
+                      "Холбоосын зураг үүсгэх",
+                    )
+              }
             >
               {submitting ? (
                 <LoaderCircle className="is-spinning" size={18} />

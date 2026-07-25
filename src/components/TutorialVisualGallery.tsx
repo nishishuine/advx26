@@ -1,4 +1,5 @@
 import type { TutorialVisual } from "../domain/orangePiVisuals";
+import { useLanguage } from "../i18n/LanguageProvider";
 
 type TutorialVisualGalleryProps = {
   visuals: TutorialVisual[];
@@ -9,10 +10,16 @@ export function TutorialVisualGallery({
   visuals,
   compact = false,
 }: TutorialVisualGalleryProps) {
+  const { text } = useLanguage();
+
   return (
     <section
       className={`tutorial-visuals${compact ? " tutorial-visuals--compact" : ""}`}
-      aria-label="实物与连接图解"
+      aria-label={text(
+        "实物与连接图解",
+        "Hardware and connection visuals",
+        "Төхөөрөмж ба холболтын зураг",
+      )}
     >
       {visuals.map((visual) => (
         <figure className="tutorial-visual" key={`${visual.src}-${visual.title}`}>

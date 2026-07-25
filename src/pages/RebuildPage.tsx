@@ -26,11 +26,13 @@ import {
   BuildStepFlowNode,
   type BuildStepNode,
 } from "../components/BuildStepFlowNode";
+import { LanguageSwitch } from "../components/LanguageSwitch";
 import { PageLoader } from "../components/PageLoader";
 import { TutorialVisualGallery } from "../components/TutorialVisualGallery";
 import { getBuildStepVisuals } from "../domain/orangePiVisuals";
-import { graphRepository } from "../domain/repository";
+import { getGraphRepository } from "../domain/repository";
 import type { BuildGuide, BuildStep, WorldCase } from "../domain/types";
+import { useLanguage } from "../i18n/LanguageProvider";
 
 type DeviceInfo = {
   ip: string;
@@ -38,10 +40,16 @@ type DeviceInfo = {
 };
 
 const buildNodeTypes = { "build-step": BuildStepFlowNode };
+type Translator = (
+  chinese: string,
+  english: string,
+  mongolian: string,
+) => string;
 
 export function RebuildPage() {
   const { caseId = "" } = useParams();
   const navigate = useNavigate();
+  const { locale, text } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const inspectorBodyRef = useRef<HTMLDivElement>(null);
   const [guide, setGuide] = useState<BuildGuide | null | undefined>(undefined);
@@ -55,9 +63,10 @@ export function RebuildPage() {
 
   useEffect(() => {
     let alive = true;
+    const repository = getGraphRepository(locale);
     Promise.all([
-      graphRepository.getCase(caseId),
-      graphRepository.getBuildGuide(caseId),
+      repository.getCase(caseId),
+      repository.getBuildGuide(caseId),
     ])
       .then(([loadedCase, loadedGuide]) => {
         if (!alive) return;
@@ -71,7 +80,7 @@ export function RebuildPage() {
     return () => {
       alive = false;
     };
-  }, [caseId]);
+  }, [caseId, locale]);
 
   useEffect(() => {
     setProgressLoaded(false);
@@ -230,17 +239,41 @@ export function RebuildPage() {
   };
 
   if (guide === undefined) {
-    return <PageLoader label="正在准备可执行教程…" />;
+    return (
+      <PageLoader
+        label={text(
+          "正在准备可执行教程…",
+          "Preparing the hands-on guide…",
+          "Дагаж хийх зааврыг бэлдэж байна…",
+        )}
+      />
+    );
   }
 
   if (!guide || !worldCase || !step) {
     return (
       <main className="runbook-error">
         <Wrench size={30} />
-        <h1>这个对象还没有可跑通的打造教程</h1>
-        <p>当前 Demo 只开放已经逐步验证过的项目。</p>
+        <h1>
+          {text(
+            "这个对象还没有可跑通的打造教程",
+            "There is no tested build guide for this object yet",
+            "Энэ зүйлд туршиж баталсан бүтээх заавар хараахан алга",
+          )}
+        </h1>
+        <p>
+          {text(
+            "当前 Demo 只开放已经逐步验证过的项目。",
+            "This demo only includes projects checked step by step.",
+            "Энэ демод зөвхөн алхам бүрээр шалгасан төслүүд багтсан.",
+          )}
+        </p>
         <button type="button" onClick={() => navigate("/")}>
-          返回重新选择
+          {text(
+            "返回重新选择",
+            "Go back and choose again",
+            "Буцаж дахин сонгох",
+          )}
         </button>
       </main>
     );
@@ -256,7 +289,7 @@ export function RebuildPage() {
   const usernameIsValid = isValidUsername(deviceInfo.username);
   const progress = (completedSteps / guide.steps.length) * 100;
   const nextStep = guide.steps[stepIndex + 1];
-  const stepVisuals = getBuildStepVisuals(step.id);
+  const stepVisuals = getBuildStepVisuals(step.id, locale);
 
   const selectStep: NodeMouseHandler<BuildStepNode> = (_, node) => {
     const nextIndex = guide.steps.findIndex(
@@ -278,31 +311,48 @@ export function RebuildPage() {
           />
           <strong>{worldCase.shortTitle}</strong>
         </div>
-        <span className="build-flow-header__mode">打造</span>
+        <span className="build-flow-header__mode">
+          {text("打造", "Build", "Бүтээх")}
+        </span>
         <Link
           className="build-flow-header__switch"
           to={`/explore/${worldCase.id}/${worldCase.rootNodeId}?view=structure&goal=learn`}
         >
           <ArrowLeft size={14} />
-          拆开看关系
+          {text(
+            "拆开看关系",
+            "Explore the relationships",
+            "Холбоосыг задлан харах",
+          )}
         </Link>
+        <LanguageSwitch />
       </header>
 
       <section className="explorer-toolbar">
         <div className="build-flow-toolbar__title">
-          <strong>从零到一</strong>
+          <strong>
+            {text("从零到一", "Start to finish", "Эхнээс нь дуустал")}
+          </strong>
           <span>{guide.totalTime}</span>
         </div>
         <div
           className="build-flow-progress"
           role="progressbar"
-          aria-label="打造完成进度"
+          aria-label={text(
+            "打造完成进度",
+            "Build progress",
+            "Бүтээх явц",
+          )}
           aria-valuemin={0}
           aria-valuemax={guide.steps.length}
           aria-valuenow={completedSteps}
         >
           <span>
-            已完成 {completedSteps}/{guide.steps.length}
+            {text(
+              `已完成 ${completedSteps}/${guide.steps.length}`,
+              `${completedSteps}/${guide.steps.length} complete`,
+              `${completedSteps}/${guide.steps.length} дууссан`,
+            )}
           </span>
           <i>
             <span style={{ width: `${progress}%` }} />
@@ -314,15 +364,23 @@ export function RebuildPage() {
         <section className="graph-stage">
           <div className="graph-canvas">
             <div className="graph-context">
-              <span className="eyebrow">打造链路</span>
+              <span className="eyebrow">
+                {text("打造链路", "Build path", "Бүтээх зам")}
+              </span>
               <h1>{guide.title}</h1>
-              <p>点击任一步，右侧会给出能直接执行的操作与验收结果。</p>
+              <p>
+                {text(
+                  "点击任一步，右侧会给出能直接执行的操作与验收结果。",
+                  "Select any step to see exact actions and a clear success check.",
+                  "Аль ч алхмыг сонгож, яг хийх үйлдэл ба амжилтын шалгуурыг баруун талд харна уу.",
+                )}
+              </p>
             </div>
 
             <div className="workflow-direction" aria-hidden="true">
-              <span>准备</span>
+              <span>{text("准备", "Prepare", "Бэлтгэл")}</span>
               <i />
-              <span>网页上线</span>
+              <span>{text("网页上线", "Site online", "Вэб ажиллана")}</span>
             </div>
 
             <ReactFlow<BuildStepNode, Edge>
@@ -337,7 +395,11 @@ export function RebuildPage() {
               nodesDraggable={false}
               nodesConnectable={false}
               elementsSelectable
-              aria-label="打造步骤链路"
+              aria-label={text(
+                "打造步骤链路",
+                "Build steps",
+                "Бүтээх алхмууд",
+              )}
               proOptions={{ hideAttribution: true }}
             />
           </div>
@@ -348,7 +410,11 @@ export function RebuildPage() {
             <header className="build-inspector__header">
               <div className="build-inspector__meta">
                 <span>
-                  第 {stepIndex + 1} / {guide.steps.length} 步
+                  {text(
+                    `第 ${stepIndex + 1} / ${guide.steps.length} 步`,
+                    `Step ${stepIndex + 1} of ${guide.steps.length}`,
+                    `${guide.steps.length}-аас ${stepIndex + 1}-р алхам`,
+                  )}
                 </span>
                 <span>
                   <Clock3 size={13} />
@@ -364,22 +430,38 @@ export function RebuildPage() {
             )}
 
             {["find-ip", "first-ssh"].includes(step.id) && (
-              <NetworkConnectionMap mode={step.id} />
+              <NetworkConnectionMap mode={step.id} translate={text} />
             )}
 
             {step.deviceState && (
               <div
                 className="build-device-state"
-                aria-label="开始这一步时的设备状态"
+                aria-label={text(
+                  "开始这一步时的设备状态",
+                  "Device state at the start of this step",
+                  "Энэ алхмын эхэн дэх төхөөрөмжийн төлөв",
+                )}
               >
-                <span>当前连接状态</span>
+                <span>
+                  {text(
+                    "当前连接状态",
+                    "Current connection state",
+                    "Одоогийн холболтын төлөв",
+                  )}
+                </span>
                 <strong>{step.deviceState}</strong>
               </div>
             )}
 
             {step.mentalModel && (
               <div className="runbook-mental-model">
-                <strong>先理解这一步</strong>
+                <strong>
+                  {text(
+                    "先理解这一步",
+                    "Understand this step first",
+                    "Эхлээд энэ алхмыг ойлгоорой",
+                  )}
+                </strong>
                 <p>{step.mentalModel}</p>
               </div>
             )}
@@ -388,10 +470,19 @@ export function RebuildPage() {
               step.id,
             ) && (
               <div className="runbook-definition">
-                <strong>烧录，不是复制文件</strong>
+                <strong>
+                  {text(
+                    "烧录，不是复制文件",
+                    "Flash the card—do not copy files",
+                    "Карт руу бичихээс, файл хуулахаас өөр",
+                  )}
+                </strong>
                 <p>
-                  烧录工具会把整个 Linux 系统按启动格式写进 TF
-                  卡。不要把下载文件直接拖进卡里。
+                  {text(
+                    "烧录工具会把整个 Linux 系统按启动格式写进 TF 卡。不要把下载文件直接拖进卡里。",
+                    "The flashing tool writes the complete Linux system in a bootable format. Do not drag the downloaded file onto the card.",
+                    "Бичих хэрэгсэл Linux системийг бүхэлд нь ачаалах хэлбэрээр TF карт руу бичнэ. Татсан файлыг карт руу зүгээр хуулж болохгүй.",
+                  )}
                 </p>
               </div>
             )}
@@ -401,17 +492,40 @@ export function RebuildPage() {
                 <CircleAlert size={17} />
                 <span>
                   {step.id === "identify-card"
-                    ? "这里只确认哪一个设备是 TF 卡，先不写入。出现两个候选设备，就停止。"
-                    : "这里只允许清空已经确认容量的 TF 卡。目标设备有一点不确定，就停止写入。"}
+                    ? text(
+                        "这里只确认哪一个设备是 TF 卡，先不写入。出现两个候选设备，就停止。",
+                        "Only identify the TF card here—do not write anything yet. Stop if two devices could be the card.",
+                        "Энд зөвхөн аль нь TF карт болохыг тогтооно — одоохондоо бүү бич. Хоёр боломжит төхөөрөмж байвал зогсоно уу.",
+                      )
+                    : text(
+                        "这里只允许清空已经确认容量的 TF 卡。目标设备有一点不确定，就停止写入。",
+                        "Only erase the TF card whose capacity you already confirmed. Stop if there is any doubt about the target.",
+                        "Зөвхөн багтаамжийг нь баталсан TF картыг устгана. Зорилтот төхөөрөмжид эргэлзээ байвал бичихээ зогсооно уу.",
+                      )}
                 </span>
               </div>
             )}
 
             {(needsIp || needsUsername) && (
-              <section className="runbook-device" aria-label="本次设备信息">
+              <section
+                className="runbook-device"
+                aria-label={text(
+                  "本次设备信息",
+                  "Device information",
+                  "Төхөөрөмжийн мэдээлэл",
+                )}
+              >
                 <div>
-                  <strong>本次设备</strong>
-                  <span>填一次，后面的命令会自动带入。</span>
+                  <strong>
+                    {text("本次设备", "Your device", "Таны төхөөрөмж")}
+                  </strong>
+                  <span>
+                    {text(
+                      "填一次，后面的命令会自动带入。",
+                      "Enter this once and later commands will fill it in automatically.",
+                      "Нэг удаа оруулахад дараагийн командуудад автоматаар орно.",
+                    )}
+                  </span>
                 </div>
                 {needsIp && (
                   <label>
@@ -430,7 +544,11 @@ export function RebuildPage() {
                           ip: event.target.value.trim(),
                         }))
                       }
-                      placeholder="例如 192.168.1.123"
+                      placeholder={text(
+                        "例如 192.168.1.123",
+                        "For example, 192.168.1.123",
+                        "Жишээ нь 192.168.1.123",
+                      )}
                       spellCheck={false}
                     />
                     <small
@@ -441,16 +559,34 @@ export function RebuildPage() {
                       }
                     >
                       {deviceInfo.ip.length > 0 && !ipIsValid
-                        ? "格式不对：只填局域网 IPv4，例如 192.168.1.123。"
-                        : "只填四组数字和点，不要带 http://、端口或空格。"}
+                        ? text(
+                            "格式不对：只填局域网 IPv4，例如 192.168.1.123。",
+                            "Invalid format: enter only a local IPv4 address, such as 192.168.1.123.",
+                            "Буруу хэлбэр: зөвхөн дотоод сүлжээний IPv4 хаяг оруулна уу, жишээ нь 192.168.1.123.",
+                          )
+                        : text(
+                            "只填四组数字和点，不要带 http://、端口或空格。",
+                            "Enter four groups of numbers and dots only—no http://, port, or spaces.",
+                            "Зөвхөн дөрвөн бүлэг тоо ба цэг оруулна — http://, порт, зай бүү нэм.",
+                          )}
                     </small>
                   </label>
                 )}
                 {needsUsername && (
                   <label>
-                    <span>你的普通用户名</span>
+                    <span>
+                      {text(
+                        "你的普通用户名",
+                        "Your regular username",
+                        "Таны энгийн хэрэглэгчийн нэр",
+                      )}
+                    </span>
                     <input
-                      aria-label="你的普通用户名"
+                      aria-label={text(
+                        "你的普通用户名",
+                        "Your regular username",
+                        "Таны энгийн хэрэглэгчийн нэр",
+                      )}
                       aria-invalid={
                         deviceInfo.username.length > 0 && !usernameIsValid
                           ? "true"
@@ -465,7 +601,11 @@ export function RebuildPage() {
                             .toLowerCase(),
                         }))
                       }
-                      placeholder="例如 jie1"
+                      placeholder={text(
+                        "例如 jie1",
+                        "For example, jie1",
+                        "Жишээ нь jie1",
+                      )}
                       spellCheck={false}
                     />
                     <small
@@ -476,8 +616,16 @@ export function RebuildPage() {
                       }
                     >
                       {deviceInfo.username.length > 0 && !usernameIsValid
-                        ? "用户名需以小写字母开头，后面只用小写字母和数字。"
-                        : "建议使用容易输入的名称，例如 jie1。"}
+                        ? text(
+                            "用户名需以小写字母开头，后面只用小写字母和数字。",
+                            "The username must start with a lowercase letter and contain only lowercase letters and numbers.",
+                            "Хэрэглэгчийн нэр жижиг латин үсгээр эхэлж, зөвхөн жижиг үсэг ба тоо агуулна.",
+                          )
+                        : text(
+                            "建议使用容易输入的名称，例如 jie1。",
+                            "Use a name that is easy to type, such as jie1.",
+                            "jie1 гэх мэт бичихэд амархан нэр сонгоно уу.",
+                          )}
                     </small>
                   </label>
                 )}
@@ -491,7 +639,13 @@ export function RebuildPage() {
               >
                 <header>
                   <strong>{step.terminalExample.title}</strong>
-                  <span>看到相似内容就说明方向正确</span>
+                  <span>
+                    {text(
+                      "看到相似内容就说明方向正确",
+                      "Similar output means you are on the right track",
+                      "Үүнтэй төстэй үр дүн гарвал зөв явж байна",
+                    )}
+                  </span>
                 </header>
                 <pre>
                   {step.terminalExample.lines.map((line) => (
@@ -519,15 +673,31 @@ export function RebuildPage() {
               <div className="runbook-section__title">
                 <span>01</span>
                 <div>
-                  <h3>开始前确认</h3>
-                  <p>这些条件不满足，就先不要继续。</p>
+                  <h3>
+                    {text(
+                      "开始前确认",
+                      "Check before you start",
+                      "Эхлэхийн өмнө шалгах",
+                    )}
+                  </h3>
+                  <p>
+                    {text(
+                      "这些条件不满足，就先不要继续。",
+                      "Do not continue until these conditions are met.",
+                      "Эдгээр нөхцөл биелтэл цааш бүү үргэлжлүүл.",
+                    )}
+                  </p>
                 </div>
               </div>
               <ul className="runbook-prerequisites">
                 {step.prerequisites.map((item) => (
                   <li key={item}>
                     <Circle size={9} />
-                    <InstructionText text={item} values={deviceInfo} />
+                    <InstructionText
+                      text={item}
+                      values={deviceInfo}
+                      translate={text}
+                    />
                   </li>
                 ))}
               </ul>
@@ -537,8 +707,20 @@ export function RebuildPage() {
               <div className="runbook-section__title">
                 <span>02</span>
                 <div>
-                  <h3>照着做</h3>
-                  <p>一次只完成一条，看到对应结果再继续。</p>
+                  <h3>
+                    {text(
+                      "照着做",
+                      "Follow these actions",
+                      "Эдгээр үйлдлийг дагах",
+                    )}
+                  </h3>
+                  <p>
+                    {text(
+                      "一次只完成一条，看到对应结果再继续。",
+                      "Do one action at a time and wait for its expected result.",
+                      "Нэг удаад нэг үйлдэл хийгээд, хүлээгдсэн үр дүнг харсны дараа үргэлжлүүл.",
+                    )}
+                  </p>
                 </div>
               </div>
               <ol className="runbook-actions">
@@ -550,6 +732,7 @@ export function RebuildPage() {
                         text={instruction}
                         copyable
                         values={deviceInfo}
+                        translate={text}
                       />
                     </p>
                   </li>
@@ -561,8 +744,20 @@ export function RebuildPage() {
               <div className="runbook-section__title">
                 <span>03</span>
                 <div>
-                  <h3>做到这些才算完成</h3>
-                  <p>逐项勾选，完成状态会显示在左侧链路。</p>
+                  <h3>
+                    {text(
+                      "做到这些才算完成",
+                      "Success checklist",
+                      "Амжилтын шалгах жагсаалт",
+                    )}
+                  </h3>
+                  <p>
+                    {text(
+                      "逐项勾选，完成状态会显示在左侧链路。",
+                      "Check each item. Completed steps appear on the path to the left.",
+                      "Зүйл бүрийг тэмдэглэнэ үү. Дууссан алхам зүүн талын замд харагдана.",
+                    )}
+                  </p>
                 </div>
               </div>
               <div className="runbook-criteria">
@@ -586,6 +781,7 @@ export function RebuildPage() {
                       <InstructionText
                         text={criterion}
                         values={deviceInfo}
+                        translate={text}
                       />
                     </label>
                   );
@@ -596,7 +792,11 @@ export function RebuildPage() {
             <details className="runbook-troubleshooting">
               <summary>
                 <CircleAlert size={16} />
-                卡住了，先检查这里
+                {text(
+                  "卡住了，先检查这里",
+                  "Stuck? Check here first",
+                  "Гацсан уу? Эхлээд энд шалга",
+                )}
                 <ChevronRight size={15} />
               </summary>
               <ul>
@@ -606,6 +806,7 @@ export function RebuildPage() {
                       text={item}
                       copyable
                       values={deviceInfo}
+                      translate={text}
                     />
                   </li>
                 ))}
@@ -621,7 +822,7 @@ export function RebuildPage() {
               disabled={stepIndex === 0}
             >
               <ArrowLeft size={15} />
-              上一步
+              {text("上一步", "Previous", "Өмнөх")}
             </button>
             {stepIndex < guide.steps.length - 1 ? (
               <button
@@ -629,7 +830,10 @@ export function RebuildPage() {
                 className="runbook-navigation__primary"
                 onClick={() => goToStep(stepIndex + 1)}
               >
-                {stepComplete ? "继续" : "下一步"} · {nextStep?.title}
+                {stepComplete
+                  ? text("继续", "Continue", "Үргэлжлүүлэх")
+                  : text("下一步", "Next", "Дараах")}{" "}
+                · {nextStep?.title}
                 <ArrowRight size={16} />
               </button>
             ) : (
@@ -642,7 +846,11 @@ export function RebuildPage() {
                   )
                 }
               >
-                完成，回看关系
+                {text(
+                  "完成，回看关系",
+                  "Finish and review the relationships",
+                  "Дуусгаад холбоосыг дахин харах",
+                )}
                 <ArrowRight size={16} />
               </button>
             )}
@@ -659,44 +867,139 @@ function criterionKey(step: BuildStep, criterionIndex: number) {
 
 function NetworkConnectionMap({
   mode,
+  translate,
 }: {
   mode: string;
+  translate: Translator;
 }) {
   const isSsh = mode === "first-ssh";
 
   return (
-    <section className="runbook-network-map" aria-label="局域网真实连接关系">
+    <section
+      className="runbook-network-map"
+      aria-label={translate(
+        "局域网真实连接关系",
+        "Actual local network connection",
+        "Дотоод сүлжээний бодит холболт",
+      )}
+    >
       <header>
-        <strong>{isSsh ? "SSH 命令实际走这条路" : "三台设备的真实连接"}</strong>
-        <span>电脑不需要直接连接 Orange Pi</span>
+        <strong>
+          {isSsh
+            ? translate(
+                "SSH 命令实际走这条路",
+                "This is the path taken by SSH",
+                "SSH команд энэ замаар явна",
+              )
+            : translate(
+                "三台设备的真实连接",
+                "How the three devices really connect",
+                "Гурван төхөөрөмжийн бодит холболт",
+              )}
+        </strong>
+        <span>
+          {translate(
+            "电脑不需要直接连接 Orange Pi",
+            "The computer does not connect directly to the Orange Pi",
+            "Компьютер Orange Pi-д шууд холбогдох шаардлагагүй",
+          )}
+        </span>
       </header>
       <div>
         <article>
           <span>01</span>
-          <strong>Windows 电脑</strong>
-          <small>{isSsh ? "PowerShell 发出 SSH" : "连接普通 Wi-Fi 或 LAN"}</small>
+          <strong>
+            {translate(
+              "Windows 电脑",
+              "Windows computer",
+              "Windows компьютер",
+            )}
+          </strong>
+          <small>
+            {isSsh
+              ? translate(
+                  "PowerShell 发出 SSH",
+                  "PowerShell sends SSH",
+                  "PowerShell SSH хүсэлт илгээнэ",
+                )
+              : translate(
+                  "连接普通 Wi-Fi 或 LAN",
+                  "Connected to normal Wi-Fi or LAN",
+                  "Энгийн Wi-Fi эсвэл LAN-д холбогдоно",
+                )}
+          </small>
         </article>
         <i>
-          <span>{isSsh ? "SSH 请求" : "同一局域网"}</span>
+          <span>
+            {isSsh
+              ? translate("SSH 请求", "SSH request", "SSH хүсэлт")
+              : translate(
+                  "同一局域网",
+                  "Same local network",
+                  "Нэг дотоод сүлжээ",
+                )}
+          </span>
         </i>
         <article className="is-router">
           <span>02</span>
-          <strong>家用路由器</strong>
-          <small>{isSsh ? "按 IP 转发到板卡" : "给板卡分配 IPv4"}</small>
+          <strong>
+            {translate(
+              "家用路由器",
+              "Home router",
+              "Гэрийн чиглүүлэгч",
+            )}
+          </strong>
+          <small>
+            {isSsh
+              ? translate(
+                  "按 IP 转发到板卡",
+                  "Forwards by IP to the board",
+                  "IP-аар хавтан руу дамжуулна",
+                )
+              : translate(
+                  "给板卡分配 IPv4",
+                  "Assigns an IPv4 address to the board",
+                  "Хавтанд IPv4 хаяг өгнө",
+                )}
+          </small>
         </article>
         <i>
-          <span>{isSsh ? "TCP 22" : "LAN 网线"}</span>
+          <span>
+            {isSsh
+              ? "TCP 22"
+              : translate("LAN 网线", "LAN cable", "LAN кабель")}
+          </span>
         </i>
         <article>
           <span>03</span>
           <strong>Orange Pi</strong>
-          <small>{isSsh ? "返回远程命令行" : "保持通电并接 LAN 口"}</small>
+          <small>
+            {isSsh
+              ? translate(
+                  "返回远程命令行",
+                  "Returns the remote terminal",
+                  "Алсын терминалыг буцаана",
+                )
+              : translate(
+                  "保持通电并接 LAN 口",
+                  "Powered on and connected to a LAN port",
+                  "Тэжээлтэй, LAN портод холбогдсон",
+                )}
+          </small>
         </article>
       </div>
       <p>
         {isSsh
-          ? "成功后，PowerShell 会从 Windows 提示符切换成 Orange Pi 的 $ 或 # 提示符。"
-          : "路由器地址是“前台地址”，Orange Pi IP 是“房间号”；后面真正要填写的是 Orange Pi IP。"}
+          ? translate(
+              "成功后，PowerShell 会从 Windows 提示符切换成 Orange Pi 的 $ 或 # 提示符。",
+              "After a successful login, PowerShell changes from the Windows prompt to the Orange Pi $ or # prompt.",
+              "Амжилттай нэвтэрсний дараа PowerShell-ийн Windows сануулга Orange Pi-ийн $ эсвэл # сануулга болно.",
+            )
+          : translate(
+              "路由器地址是“前台地址”，Orange Pi IP 是“房间号”；后面真正要填写的是 Orange Pi IP。",
+              "Think of the router address as the front desk and the Orange Pi IP as the room number. You need the Orange Pi IP.",
+              "Чиглүүлэгчийн хаягийг үүдний ширээ, Orange Pi-ийн IP-г өрөөний дугаар гэж бодоорой. Танд Orange Pi-ийн IP хэрэгтэй.",
+            )}
       </p>
     </section>
   );
@@ -743,10 +1046,12 @@ function InstructionText({
   text,
   copyable = false,
   values,
+  translate,
 }: {
   text: string;
   copyable?: boolean;
   values: DeviceInfo;
+  translate: Translator;
 }) {
   const validIp = isValidPrivateIpv4(values.ip);
   const validUsername = isValidUsername(values.username);
@@ -754,10 +1059,21 @@ function InstructionText({
   const hasUnresolvedUsername =
     text.includes("{{USER}}") && !validUsername;
   const resolvedText = text
-    .replaceAll("{{IP}}", validIp ? values.ip : "IP待填写")
+    .replaceAll(
+      "{{IP}}",
+      validIp
+        ? values.ip
+        : translate("IP待填写", "IP required", "IP оруулах шаардлагатай"),
+    )
     .replaceAll(
       "{{USER}}",
-      validUsername ? values.username : "用户名待填写",
+      validUsername
+        ? values.username
+        : translate(
+            "用户名待填写",
+            "username required",
+            "хэрэглэгчийн нэр шаардлагатай",
+          ),
     );
   const pieces = resolvedText
     .split(/(`[^`]+`|https?:\/\/[^\s，。]+)/g)
@@ -782,7 +1098,11 @@ function InstructionText({
               rel="noreferrer"
               key={`${piece}-${index}`}
             >
-              打开链接 ↗
+              {translate(
+                "打开链接 ↗",
+                "Open link ↗",
+                "Холбоос нээх ↗",
+              )}
             </a>
           );
         }
@@ -794,6 +1114,7 @@ function InstructionText({
           <CopyCommand
             command={command}
             disabled={hasUnresolvedIp || hasUnresolvedUsername}
+            translate={translate}
             key={`${command}-${index}`}
           />
         ) : (
@@ -807,9 +1128,11 @@ function InstructionText({
 function CopyCommand({
   command,
   disabled = false,
+  translate,
 }: {
   command: string;
   disabled?: boolean;
+  translate: Translator;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -828,7 +1151,19 @@ function CopyCommand({
       type="button"
       className="runbook-command"
       onClick={copy}
-      title={disabled ? "先填写上方设备信息" : "复制命令"}
+      title={
+        disabled
+          ? translate(
+              "先填写上方设备信息",
+              "Enter the device details above first",
+              "Эхлээд дээрх төхөөрөмжийн мэдээллийг оруулна уу",
+            )
+          : translate(
+              "复制命令",
+              "Copy command",
+              "Командыг хуулах",
+            )
+      }
       disabled={disabled}
     >
       <code>{command}</code>

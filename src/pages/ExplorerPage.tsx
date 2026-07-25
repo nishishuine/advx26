@@ -20,6 +20,7 @@ import {
   Layers3,
 } from "lucide-react";
 import { EdgeInspector } from "../components/EdgeInspector";
+import { LanguageSwitch } from "../components/LanguageSwitch";
 import {
   ExplorerFlowNode,
   type ExplorerNode,
@@ -40,13 +41,14 @@ import {
   resolveLayoutMode,
 } from "../domain/networkLayout";
 import {
-  RELATION_LABELS,
-  VIEW_LABELS,
+  getRelationLabel,
+  getViewLabel,
   getViewsForDomain,
 } from "../domain/relations";
-import { graphRepository } from "../domain/repository";
-import { orangePiOverviewVisuals } from "../domain/orangePiVisuals";
+import { getGraphRepository } from "../domain/repository";
+import { getOrangePiOverviewVisuals } from "../domain/orangePiVisuals";
 import type { GraphEdge, ViewType, WorldCase } from "../domain/types";
+import { useLanguage } from "../i18n/LanguageProvider";
 
 const nodeTypes = { explorer: ExplorerFlowNode };
 
@@ -101,6 +103,7 @@ function layoutNodes(
 
 export function ExplorerPage() {
   const navigate = useNavigate();
+  const { locale, text } = useLanguage();
   const { caseId = "", nodeId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const [worldCase, setWorldCase] = useState<WorldCase | null>(null);
@@ -126,7 +129,7 @@ export function ExplorerPage() {
     setWorldCase(null);
     setError("");
 
-    graphRepository
+    getGraphRepository(locale)
       .getCase(caseId)
       .then((loadedCase) => {
         if (!alive) return;
@@ -134,13 +137,21 @@ export function ExplorerPage() {
       })
       .catch((reason: unknown) => {
         if (!alive) return;
-        setError(reason instanceof Error ? reason.message : "案例加载失败");
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : text(
+                "案例加载失败",
+                "Failed to load the project",
+                "Төслийг ачаалж чадсангүй",
+              ),
+        );
       });
 
     return () => {
       alive = false;
     };
-  }, [caseId]);
+  }, [caseId, locale, text]);
 
   useEffect(() => {
     if (!worldCase || nodeId) return;
@@ -212,12 +223,16 @@ export function ExplorerPage() {
         ...primary,
         id: `display:${view}:${key}`,
         displayLabel: Array.from(
-          new Set(edges.map((edge) => RELATION_LABELS[edge.relation])),
+          new Set(
+            edges.map((edge) =>
+              getRelationLabel(edge.relation, locale),
+            ),
+          ),
         ).join(" · "),
         members: edges,
       };
     });
-  }, [view, layerEdges]);
+  }, [view, layerEdges, locale]);
 
   const selectedDisplayEdge = useMemo(
     () => displayEdges.find((edge) => edge.id === selectedEdgeId) ?? null,
@@ -261,7 +276,7 @@ export function ExplorerPage() {
           target: edge.target,
           label: isSelected
             ? isSimpleExplore
-              ? "如何接上"
+              ? text("如何接上", "How it connects", "Хэрхэн холбогдох")
               : edge.displayLabel
             : undefined,
           type: isSimpleExplore
@@ -312,7 +327,14 @@ export function ExplorerPage() {
           labelBgBorderRadius: 6,
         };
       }),
-    [displayEdges, isSimpleExplore, isWorkflow, selectedDisplayEdge, view],
+    [
+      displayEdges,
+      isSimpleExplore,
+      isWorkflow,
+      selectedDisplayEdge,
+      text,
+      view,
+    ],
   );
 
   const selectedNode = useMemo(() => {
@@ -377,10 +399,20 @@ export function ExplorerPage() {
     return (
       <div className="error-page">
         <CircleHelp size={34} />
-        <h1>这个世界还没有被整理</h1>
+        <h1>
+          {text(
+            "这个世界还没有被整理",
+            "This topic has not been mapped yet",
+            "Энэ сэдвийг хараахан зураглаагүй байна",
+          )}
+        </h1>
         <p>{error}</p>
         <button className="button button--dark" onClick={() => navigate("/")}>
-          返回首页
+          {text(
+            "返回首页",
+            "Back to home",
+            "Нүүр хуудас руу буцах",
+          )}
         </button>
       </div>
     );
@@ -409,18 +441,28 @@ export function ExplorerPage() {
           />
           <strong>{worldCase.shortTitle}</strong>
         </div>
-        <span className="build-flow-header__mode">拆开</span>
+        <span className="build-flow-header__mode">
+          {text("拆开", "Explore", "Задлан ойлгох")}
+        </span>
         <Link
           className="build-flow-header__switch"
           to={`/rebuild/${worldCase.id}`}
         >
-          开始打造
+          {text("开始打造", "Start building", "Бүтээж эхлэх")}
           <ArrowRight size={14} />
         </Link>
+        <LanguageSwitch />
       </header>
 
       <section className="explorer-toolbar">
-        <nav className="breadcrumbs" aria-label="探索路径">
+        <nav
+          className="breadcrumbs"
+          aria-label={text(
+            "探索路径",
+            "Exploration path",
+            "Задлан үзэх зам",
+          )}
+        >
           <button type="button" onClick={() => navigate("/")}>
             <Home size={14} />
           </button>
@@ -441,10 +483,22 @@ export function ExplorerPage() {
         {isSimpleExplore ? (
           <div className="explore-mode-label">
             <span />
-            拆开 · 主要部分与关系
+            {text(
+              "拆开 · 主要部分与关系",
+              "Explore · Main parts and relationships",
+              "Задлан ойлгох · Үндсэн хэсэг ба холбоос",
+            )}
           </div>
         ) : (
-          <div className="view-switcher" role="group" aria-label="关系视图">
+          <div
+            className="view-switcher"
+            role="group"
+            aria-label={text(
+              "关系视图",
+              "Relationship view",
+              "Холбоосын харагдац",
+            )}
+          >
             {availableViews.map((viewId) => (
               <button
                 type="button"
@@ -459,7 +513,7 @@ export function ExplorerPage() {
                 onClick={() => setView(viewId)}
                 key={viewId}
               >
-                {VIEW_LABELS[viewId]}
+                {getViewLabel(viewId, locale)}
                 {view === viewId && <span>{layerEdges.length}</span>}
               </button>
             ))}
@@ -474,9 +528,21 @@ export function ExplorerPage() {
               <span className="eyebrow">
                 {isSimpleExplore
                   ? currentNode.id === worldCase.rootNodeId
-                    ? "主要部分"
-                    : "继续拆开"
-                  : `L${currentNode.level + 1} · ${children.length} 个节点`}
+                    ? text(
+                        "主要部分",
+                        "Main parts",
+                        "Үндсэн хэсгүүд",
+                      )
+                    : text(
+                        "继续拆开",
+                        "Go deeper",
+                        "Цааш задлах",
+                      )
+                  : text(
+                      `L${currentNode.level + 1} · ${children.length} 个节点`,
+                      `L${currentNode.level + 1} · ${children.length} nodes`,
+                      `L${currentNode.level + 1} · ${children.length} зангилаа`,
+                    )}
               </span>
               <h1>{currentNode.label}</h1>
               <p>{currentNode.summary}</p>
@@ -487,9 +553,15 @@ export function ExplorerPage() {
               (!isSimpleExplore ||
                 currentNode.id === worldCase.rootNodeId) && (
               <div className="workflow-direction" aria-hidden="true">
-                <span>开始</span>
+                <span>{text("开始", "Start", "Эхлэл")}</span>
                 <i />
-                <span>接近完成</span>
+                <span>
+                  {text(
+                    "接近完成",
+                    "Nearly complete",
+                    "Дуусах дөхөв",
+                  )}
+                </span>
               </div>
               )}
 
@@ -520,8 +592,20 @@ export function ExplorerPage() {
             ) : (
               <div className="graph-empty">
                 <Layers3 size={28} />
-                <h2>这里已经是当前目标的最小单元</h2>
-                <p>你可以从面包屑返回上一层，或切换探索目标。</p>
+                <h2>
+                  {text(
+                    "这里已经是当前目标的最小单元",
+                    "This is the smallest useful unit for the current goal",
+                    "Энэ нь одоогийн зорилгын хамгийн жижиг хэрэгтэй нэгж",
+                  )}
+                </h2>
+                <p>
+                  {text(
+                    "你可以从面包屑返回上一层，或切换探索目标。",
+                    "Use the path above to go back one level or choose another goal.",
+                    "Дээрх замаар нэг түвшин буцах эсвэл өөр зорилго сонгоно уу.",
+                  )}
+                </p>
                 {currentNode.parentId && (
                   <button
                     className="button button--accent"
@@ -532,7 +616,11 @@ export function ExplorerPage() {
                       } as React.CSSProperties
                     }
                   >
-                    返回上一层
+                    {text(
+                      "返回上一层",
+                      "Back one level",
+                      "Нэг түвшин буцах",
+                    )}
                   </button>
                 )}
               </div>
@@ -546,7 +634,11 @@ export function ExplorerPage() {
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                当前层没有{VIEW_LABELS[view]}关系，节点仍保留以便比较。
+                {text(
+                  `当前层没有${getViewLabel(view, locale)}关系，节点仍保留以便比较。`,
+                  `There are no ${getViewLabel(view, locale)} relationships at this level. Nodes remain visible for comparison.`,
+                  `Энэ түвшинд ${getViewLabel(view, locale)} холбоос алга. Харьцуулахын тулд зангилаануудыг хэвээр үлдээлээ.`,
+                )}
               </motion.div>
               )}
           </div>
@@ -599,17 +691,35 @@ export function ExplorerPage() {
             }
           >
             <span className={isSimpleExplore ? "simple-inspector__eyebrow" : "eyebrow"}>
-              关系讲解
+              {text(
+                "关系讲解",
+                "Relationship details",
+                "Холбоосын тайлбар",
+              )}
             </span>
-            <h2>点一个部分看看</h2>
+            <h2>
+              {text(
+                "点一个部分看看",
+                "Select a part",
+                "Нэг хэсгийг сонгоно уу",
+              )}
+            </h2>
             <p>
               {isSimpleExplore
-                ? "点小圆点了解它负责什么；点连线了解前后两个部分如何接上。"
-                : "点击节点查看它的作用与上下游；点击两个节点之间的连线，拆开理解它们如何发生联系。"}
+                ? text(
+                    "点小圆点了解它负责什么；点连线了解前后两个部分如何接上。",
+                    "Select a node to see its role, or a line to see how two parts connect.",
+                    "Зангилааг сонгож үүргийг нь, шугамыг сонгож хоёр хэсэг хэрхэн холбогдсоныг харна уу.",
+                  )
+                : text(
+                    "点击节点查看它的作用与上下游；点击两个节点之间的连线，拆开理解它们如何发生联系。",
+                    "Select a node to see its role and dependencies, or a line to understand how two nodes interact.",
+                    "Зангилааг сонгож үүрэг ба хамаарлыг, шугамыг сонгож хоёр зангилаа хэрхэн харилцдгийг үзнэ үү.",
+                  )}
             </p>
             {isSimpleExplore && (
               <TutorialVisualGallery
-                visuals={orangePiOverviewVisuals}
+                visuals={getOrangePiOverviewVisuals(locale)}
                 compact
               />
             )}

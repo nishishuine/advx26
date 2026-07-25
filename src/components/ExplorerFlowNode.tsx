@@ -6,6 +6,7 @@ import {
 } from "@xyflow/react";
 import type { LayoutMode } from "../domain/networkLayout";
 import type { GraphNode } from "../domain/types";
+import { useLanguage } from "../i18n/LanguageProvider";
 
 export type ExplorerNodeData = {
   graphNode: GraphNode;
@@ -21,6 +22,7 @@ export function ExplorerFlowNode({
   data,
   selected,
 }: NodeProps<ExplorerNode>) {
+  const { text } = useLanguage();
   const { graphNode, accent, dimmed, linked, layoutMode } = data;
   const isWorkflow = layoutMode === "workflow";
 
@@ -28,7 +30,15 @@ export function ExplorerFlowNode({
     <div
       className={`network-node ${isWorkflow ? "network-node--workflow" : ""} ${selected ? "network-node--selected" : ""} ${linked ? "network-node--linked" : ""} ${dimmed ? "network-node--dimmed" : ""} ${graphNode.canExpand ? "network-node--expandable" : ""}`}
       style={{ "--node-accent": accent } as React.CSSProperties}
-      title={graphNode.canExpand ? `${graphNode.label} · 双击继续深入` : graphNode.label}
+      title={
+        graphNode.canExpand
+          ? text(
+              `${graphNode.label} · 双击继续深入`,
+              `${graphNode.label} · Double-click to go deeper`,
+              `${graphNode.label} · Давхар товшиж цааш үзэх`,
+            )
+          : graphNode.label
+      }
     >
       <Handle
         type="target"

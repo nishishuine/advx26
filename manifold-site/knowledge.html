@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识学习 — MANIFOLD 流形</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="manifold-canvas"></canvas>
+
+<a class="back-link" href="index.html#products" data-cursor="BACK"><span class="bar"></span>MANIFOLD / PRODUCTS</a>
+
+<main>
+  <header class="detail-hero">
+    <div class="p-glyph big">知</div>
+    <div class="detail-meta">
+      <span>P.06</span>
+      <span>STATUS / SOON</span>
+      <span>PRIORITY / 15/20</span>
+    </div>
+    <h1 class="detail-title">知识学习</h1>
+    <div class="detail-title-en">Knowledge Mode</div>
+    <p class="detail-lead">
+      任何知识体系都可以被拆解成概念网络：<strong>前置依赖、层级结构、关联路径</strong>。
+      Manifold 让 AI 的输出从"讲义"变成"可导航的知识地图"——
+      学习的路标，而不是一堵文字墙。
+    </p>
+  </header>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">P.06 / SPEC</div>
+        <h2 class="sec-title">标注集 <span class="stroke">&amp; 渲染</span></h2>
+      </div>
+    </div>
+    <div class="spec-grid reveal">
+      <div class="spec-cell">
+        <h3>ANNOTATION SET — 标注集</h3>
+        <ul>
+          <li><code>[[concept:概念]]</code> — 概念标记</li>
+          <li><code>[[prereq:前置]]</code> — 前置依赖</li>
+          <li><code>[[rel:关联]]</code> — 概念间关联</li>
+          <li><code>[[path:路径]]</code> — 学习路径</li>
+          <li><code>[[ex:例子]]</code> — 示例标记</li>
+          <li><code>[[quiz:检测]]</code> — 掌握度检测</li>
+        </ul>
+      </div>
+      <div class="spec-cell">
+        <h3>RENDERING — 渲染冲击</h3>
+        <p>概念网络图、前置依赖树、个性化学习路径。让"学不会"可以被定位——不是你不努力，是你不知道缺了哪块前置拼图。</p>
+      </div>
+      <div class="spec-cell">
+        <h3>WHY — 优先级</h3>
+        <p>信息损失 ★★★★★ / 渲染冲击 ★★★☆☆ / 共鸣 ★★★★☆ / 互补性 ★★★☆☆ —— 总分 15/20。覆盖人群最广的垂类，是 Manifold 开放标注集生态的长期方向。</p>
+      </div>
+      <div class="spec-cell">
+        <h3>SCENE — 典型场景</h3>
+        <p>"看不懂傅里叶变换"→ Manifold 沿前置依赖树回溯：复数 → 积分 → 三角函数，定位缺口 → 生成只属于你的补习路径，每一步可检测、可追问。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">P.06 / DEMO</div>
+        <h2 class="sec-title">知识不是墙，<span class="stroke">是地图</span></h2>
+      </div>
+    </div>
+    <div class="demo-panel reveal"><span class="hl">Manifold 标注示意：</span>
+
+[[concept:fourier]]傅里叶变换[[/]]
+  [[prereq:complex]]前置：复数运算[[/]]
+  [[prereq:integral]]前置：积分[[/]]
+  [[rel:signal]]关联：信号处理[[/]]
+
+<span class="hl">渲染效果：</span>
+  前置依赖树
+              ┌──────────┐
+              │ 傅里叶变换 │
+              └────┬─────┘
+        ┌──────────┼──────────┐
+   ┌────┴───┐  ┌───┴────┐  ┌──┴─────┐
+   │ 复数    │  │ 积分    │  │ 三角函数 │
+   │ ✓ 已掌握 │  │ ✗ 缺口  │  │ ✓ 已掌握 │
+   └────────┘  └────────┘  └────────┘
+        学习路径已重新规划：积分 → 傅里叶变换</div>
+  </section>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">NEXT / VERTICALS</div>
+        <h2 class="sec-title">探索其他 <span class="stroke">垂类</span></h2>
+      </div>
+    </div>
+    <div class="next-products reveal">
+      <a class="next-item" href="game.html"><div class="ni-idx">P.03</div><div class="ni-name">游戏攻略</div><div class="ni-en">Game Guide</div></a>
+      <a class="next-item" href="history.html"><div class="ni-idx">P.04</div><div class="ni-name">历史时间线</div><div class="ni-en">History Timeline</div></a>
+      <a class="next-item" href="recipe.html"><div class="ni-idx">P.05</div><div class="ni-name">菜谱烹饪</div><div class="ni-en">Recipe Mode</div></a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot-grid">
+    <div><b>MANIFOLD</b><br>给 AI 的输出装上语义骨架</div>
+    <div><b>TEAM</b><br>燕麦燕麦奶 × 梦之泪伤 · ADVENTUREX 2026</div>
+    <div><b>CHAIN</b><br>BUILT ON INJECTIVE</div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

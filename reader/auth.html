@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登入 · AI 阅读伴侣</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4ecdc;--paper:#fdfaf1;--paper2:#f8f1e1;
+  --ink:#2a2218;--ink2:#4a3f2e;--muted:#948668;
+  --line:#e4d8c0;--line2:#d8caa8;
+  --gold:#b8860b;--gold2:#c9a227;
+  --serif:"Songti SC","STSong","SimSun","Noto Serif CJK SC","Source Han Serif SC",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#15120c;--paper:#221d14;--paper2:#2a2418;
+  --ink:#ece2cd;--ink2:#c8bca0;--muted:#8a7d62;
+  --line:#383022;--line2:#463a26;
+  --gold:#d4a02a;--gold2:#e0b440;
+}
+body{
+  font-family:var(--sans);color:var(--ink);
+  background:var(--bg);
+  background-image:radial-gradient(1200px 600px at 15% -5%,rgba(184,134,11,.07),transparent 60%);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+}
+.card{
+  width:100%;max-width:400px;background:var(--paper);
+  border:1px solid var(--line2);border-radius:20px;
+  padding:40px 36px 32px;box-shadow:0 20px 60px rgba(60,45,20,.12);
+}
+.kicker{
+  color:var(--gold);font-size:11px;font-weight:600;letter-spacing:3px;
+  text-align:center;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.kicker::before,.kicker::after{content:"";width:26px;height:1px;background:var(--line2)}
+h1{font-family:var(--serif);font-size:30px;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:24px}
+.tabs{display:flex;background:var(--paper2);border-radius:12px;padding:4px;margin-bottom:24px}
+.tabs button{
+  flex:1;border:none;background:transparent;padding:9px 0;border-radius:9px;
+  font-size:14px;font-weight:600;letter-spacing:2px;color:var(--muted);cursor:pointer;transition:all .2s;
+}
+.tabs button.on{background:var(--paper);color:var(--gold);box-shadow:0 2px 8px rgba(60,45,20,.1)}
+label{display:block;font-size:12px;color:var(--ink2);letter-spacing:1px;margin:14px 0 6px}
+input{
+  width:100%;padding:11px 14px;border:1px solid var(--line2);border-radius:10px;
+  background:var(--paper2);color:var(--ink);font-size:14px;outline:none;transition:border .15s;
+}
+input:focus{border-color:var(--gold)}
+.err{margin-top:14px;font-size:12px;color:#c0392b;min-height:16px;letter-spacing:.5px}
+.go{
+  margin-top:10px;width:100%;padding:12px 0;border:none;border-radius:12px;cursor:pointer;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;
+  font-size:15px;font-weight:700;letter-spacing:4px;
+  box-shadow:0 2px 10px rgba(184,134,11,.3);transition:transform .15s;
+}
+.go:hover{transform:translateY(-1px)}
+.go:disabled{opacity:.5;cursor:wait}
+.back{display:block;text-align:center;margin-top:20px;font-size:12px;color:var(--muted);text-decoration:none;letter-spacing:1px}
+.back:hover{color:var(--gold)}
+.tip{margin-top:16px;text-align:center;font-size:11px;color:var(--muted);letter-spacing:.5px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="kicker">AI 阅读伴侣</div>
+  <h1>藏书阁</h1>
+  <div class="tabs">
+    <button id="tabLogin" class="on">登 录</button>
+    <button id="tabReg">注 册</button>
+  </div>
+  <form id="form">
+    <label>用户名</label>
+    <input id="username" autocomplete="username" placeholder="2-20 位中英文、数字、下划线" required>
+    <label>密码</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="至少 6 位" required>
+    <div class="err" id="err"></div>
+    <button class="go" id="btnGo" type="submit">登 录</button>
+  </form>
+  <a class="back" href="bookshelf.html">← 先随便逛逛（未登录只能用本地书架）</a>
+  <div class="tip">登录后书籍存入云端书库，可跨设备访问；<br>共享的书会进入书城，并在 Injective 链上留下存证。</div>
+</div>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+/* 与书架共用暗色偏好 */
+if(localStorage.getItem("rc-shelf-dark")==="1")document.documentElement.dataset.theme="dark";
+
+let mode="login";
+function setMode(m){
+  mode=m;
+  $("#tabLogin").classList.toggle("on",m==="login");
+  $("#tabReg").classList.toggle("on",m==="reg");
+  $("#btnGo").textContent=m==="login"?"登 录":"注 册";
+  $("#password").autocomplete=m==="login"?"current-password":"new-password";
+  $("#err").textContent="";
+}
+$("#tabLogin").onclick=()=>setMode("login");
+$("#tabReg").onclick=()=>setMode("reg");
+
+/* 已登录直接回书架 */
+if(API.token()&&API.user())location.replace("bookshelf.html");
+
+$("#form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const u=$("#username").value.trim(),p=$("#password").value;
+  $("#err").textContent="";$("#btnGo").disabled=true;
+  try{
+    if(mode==="login")await API.login(u,p);
+    else await API.register(u,p);
+    location.href="bookshelf.html";
+  }catch(err){
+    $("#err").textContent=err.message||"操作失败";
+  }finally{$("#btnGo").disabled=false;}
+});
+})();
+</script>
+</body>
+</html>

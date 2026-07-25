@@ -24,13 +24,13 @@ const S={
   graphMode:"read",graphNet:null,graphFullConfirmed:false,
   timelineFull:false,
   sentences:[],pageChars:[],pageSents:[],appearedChars:new Set(),
-  tts:{playing:false,idx:0,rate:1,voice:null},
+  tts:{playing:false,paused:false,idx:0,rate:1,voice:null},
   paginating:false
 };
 
 const PACK_FILE=(()=>{
   try{const q=new URLSearchParams(location.search).get("pack");
-    if(q&&/^(upload:)?[^/\\?%*|"<>]+\.bookpack$/i.test(q))return q;
+    if(q&&(/^(upload:)?[^/\\?%*|"<>]+\.bookpack$/i.test(q)||/^cloud:\d+$/i.test(q)))return q;
   }catch(e){}
   return "百年孤独.bookpack";
 })();
@@ -56,15 +56,25 @@ function loadPrefs(){
 document.addEventListener("DOMContentLoaded",async()=>{
   loadPrefs();applyTheme();bindUI();
   try{
-    const disp=PACK_FILE.replace(/^upload:/i,"").replace(/\.bookpack$/i,"");
+    const disp=PACK_FILE.startsWith("cloud:")?"云端书籍":PACK_FILE.replace(/^upload:/i,"").replace(/\.bookpack$/i,"");
     $("#bootText").textContent=`正在打开《${disp}》书包…`;
+    if(PACK_FILE.startsWith("cloud:")){
+      /* 云端书库：本人或共享书，经后端 API 拉取 */
+      if(typeof API==="undefined")throw new Error("缺少 api.js");
+      try{
+        await loadPack(await API.fetchPack(PACK_FILE.slice(6)));
+      }catch(err){
+        showBootError(`云端书包加载失败：${err.message||err}——若是私有书请先登录`);enableDrop();
+      }
+      return;
+    }
     if(PACK_FILE.startsWith("upload:")){
       if(typeof PackStore==="undefined")throw 0;
       const buf=await PackStore.get(PACK_FILE.slice(7));
       if(!buf)throw 0;
       await loadPack(buf);
     }else{
-      const res=await fetch(encodeURI(PACK_FILE));
+      const res=await fetch(encodeURI(PACK_FILE),{cache:"no-cache"});
       if(!res.ok)throw 0;
       await loadPack(await res.arrayBuffer());
     }
@@ -114,6 +124,7 @@ function computeCollisions(){collisionSet=new Set();} // badges disabled per use
 
 /* ═══════ welcome ═══════ */
 function showWelcome(){
+  document.title=`${book.title} · AI 阅读伴侣`;
   $("#welcomeCover").src=coverURL;
   $("#welcomeTitle").textContent=book.title;
   $("#welcomeAuthor").textContent=book.author;
@@ -323,11 +334,16 @@ function initPagination(){
   const pw=pages.clientWidth-12;  // 减12px留右边距，防右边缘裁字
   if(pw<=0)return;
   SPAN=pw+PAGE_GAP;
-  content.style.columnWidth=pw+"px";
+  // 页面够宽时每屏排两栏（书页对开），避免单行过长
+  const cols=pw>=900?2:1;
+  const colW=Math.floor((pw-(cols-1)*PAGE_GAP)/cols);
+  content.style.columnWidth=colW+"px";
   content.style.columnGap=PAGE_GAP+"px";
   content.style.transform="none";
   const totalW=content.scrollWidth;
-  S.totalPages=Math.max(1,Math.round((totalW+PAGE_GAP)/SPAN));
+  // 先算实际栏数，再按每屏 cols 栏折算页数（兼容栏宽取整误差）
+  const nCols=Math.max(1,Math.round((totalW+PAGE_GAP)/(colW+PAGE_GAP)));
+  S.totalPages=Math.max(1,Math.ceil(nCols/cols));
   computePageMapping();
   $("#pageIndicator").innerHTML=`<b>1</b> / ${S.totalPages}`;
 }
@@ -345,14 +361,14 @@ function computePageMapping(){
       if(el.classList.contains("ch")){
         const r=el.getBoundingClientRect();
         const left=r.left-cRect.left;
-        const pg=Math.max(0,Math.min(S.totalPages-1,Math.floor((left+SPAN*0.5)/SPAN)));
+        const pg=Math.max(0,Math.min(S.totalPages-1,Math.floor(left/SPAN)));
         if(!S.pageChars[pg])S.pageChars[pg]=new Set();
         S.pageChars[pg].add(el.dataset.cid);
       }
       if(el.classList.contains("sent")&&el.dataset.sid!==undefined){
         const r=el.getBoundingClientRect();
         const left=r.left-cRect.left;
-        const pg=Math.max(0,Math.min(S.totalPages-1,Math.floor((left+SPAN*0.5)/SPAN)));
+        const pg=Math.max(0,Math.min(S.totalPages-1,Math.floor(left/SPAN)));
         if(!S.pageSents[pg])S.pageSents[pg]=[];
         S.pageSents[pg].push(+el.dataset.sid);
       }
@@ -890,13 +906,19 @@ if(window.speechSynthesis){speechSynthesis.onvoiceschanged=pickVoice;pickVoice()
 function toggleTTS(){
   if(!window.speechSynthesis){toast("当前浏览器不支持语音合成");return;}
   if(S.tts.playing){
-    speechSynthesis.cancel();S.tts.playing=false;
+    speechSynthesis.cancel();S.tts.playing=false;S.tts.paused=true;
     clearSpeaking();
     $("#ttsPlayPause").textContent="▶";
     return;
   }
   if(!S.sentences.length){toast("正在加载，请稍候");return;}
   if(!S.tts.voice)pickVoice();
+  // 暂停后恢复 → 从暂停处继续；首次启动 → 从当前页第一句开始
+  if(!S.tts.paused){
+    const pageSents=S.pageSents[S.page];
+    S.tts.idx=pageSents&&pageSents.length>0?pageSents[0]:0;
+  }
+  S.tts.paused=false;
   S.tts.playing=true;
   $("#ttsBar").hidden=false;$("#ttsPlayPause").textContent="⏸";
   $("#btnTTS").classList.add("active");
@@ -916,7 +938,7 @@ function speakNext(){
 }
 function stopTTS(){
   if(!window.speechSynthesis)return;
-  S.tts.playing=false;speechSynthesis.cancel();
+  S.tts.playing=false;S.tts.paused=false;speechSynthesis.cancel();
   const bar=$("#ttsBar");if(bar)bar.hidden=true;clearSpeaking();
   const pp=$("#ttsPlayPause");if(pp)pp.textContent="▶";
   const fab=$("#btnTTS");if(fab)fab.classList.remove("active");

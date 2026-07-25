@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>书城 · AI 阅读伴侣</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4ecdc;--paper:#fdfaf1;--paper2:#f8f1e1;
+  --ink:#2a2218;--ink2:#4a3f2e;--muted:#948668;
+  --line:#e4d8c0;--line2:#d8caa8;
+  --gold:#b8860b;--gold2:#c9a227;
+  --serif:"Songti SC","STSong","SimSun","Noto Serif CJK SC","Source Han Serif SC",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#15120c;--paper:#221d14;--paper2:#2a2418;
+  --ink:#ece2cd;--ink2:#c8bca0;--muted:#8a7d62;
+  --line:#383022;--line2:#463a26;
+  --gold:#d4a02a;--gold2:#e0b440;
+}
+[hidden]{display:none!important}
+body{
+  font-family:var(--sans);color:var(--ink);background:var(--bg);
+  background-image:radial-gradient(1200px 600px at 15% -5%,rgba(184,134,11,.07),transparent 60%);
+  min-height:100vh;-webkit-font-smoothing:antialiased;
+}
+.head{display:flex;align-items:flex-end;justify-content:space-between;padding:32px 32px 0;flex-wrap:wrap;gap:14px}
+.brand-kicker{
+  color:var(--gold);font-size:11px;font-weight:600;letter-spacing:3px;margin-bottom:10px;
+  display:flex;align-items:center;gap:10px;
+}
+.brand-kicker::before,.brand-kicker::after{content:"";width:26px;height:1px;background:var(--line2)}
+.brand-title{font-family:var(--serif);font-size:42px;font-weight:900;letter-spacing:14px;line-height:1}
+.head-right{display:flex;align-items:center;gap:10px;padding-bottom:6px}
+.btn{
+  background:transparent;border:1px solid var(--line2);height:38px;padding:0 16px;
+  border-radius:10px;font-size:13px;cursor:pointer;color:var(--ink2);letter-spacing:1px;
+  display:flex;align-items:center;gap:6px;transition:all .18s;text-decoration:none;
+}
+.btn:hover{border-color:var(--gold);color:var(--gold);transform:translateY(-1px)}
+
+.toolbar{display:flex;gap:12px;align-items:center;padding:22px 32px 6px;flex-wrap:wrap}
+.search{
+  flex:1;min-width:220px;max-width:460px;display:flex;align-items:center;gap:8px;
+  background:var(--paper);border:1px solid var(--line2);border-radius:12px;padding:0 14px;height:42px;
+}
+.search input{flex:1;border:none;outline:none;background:transparent;color:var(--ink);font-size:14px}
+.sorts{display:flex;background:var(--paper2);border-radius:10px;padding:3px}
+.sorts button{
+  border:none;background:transparent;padding:7px 16px;border-radius:8px;
+  font-size:12px;font-weight:600;letter-spacing:1px;color:var(--muted);cursor:pointer;transition:all .2s;
+}
+.sorts button.on{background:var(--paper);color:var(--gold);box-shadow:0 1px 6px rgba(60,45,20,.1)}
+.count{font-size:12px;color:var(--muted);letter-spacing:1px}
+
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  gap:18px;padding:18px 32px 48px;
+}
+.card{
+  display:flex;gap:16px;background:var(--paper);border:1px solid var(--line2);
+  border-radius:16px;padding:16px;transition:transform .2s,box-shadow .2s;
+  animation:up .5s cubic-bezier(.22,.61,.36,1) both;
+}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.card:hover{transform:translateY(-3px);box-shadow:0 14px 36px rgba(60,45,20,.14)}
+.cv{
+  width:86px;height:126px;flex:none;border-radius:6px;overflow:hidden;
+  background:linear-gradient(150deg,var(--paper2),var(--bg));
+  box-shadow:0 6px 16px rgba(60,45,20,.2);
+  display:flex;align-items:center;justify-content:center;
+}
+.cv img{width:100%;height:100%;object-fit:cover;display:block}
+.cv span{font-family:var(--serif);font-size:13px;font-weight:700;color:var(--ink2);text-align:center;padding:6px;letter-spacing:2px}
+.info{flex:1;min-width:0;display:flex;flex-direction:column}
+.t{font-family:var(--serif);font-size:17px;font-weight:800;letter-spacing:1px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.a{font-size:12px;color:var(--muted);margin-top:3px}
+.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted);letter-spacing:.5px}
+.chain-badge{
+  display:inline-flex;align-items:center;gap:4px;margin-top:8px;align-self:flex-start;
+  font-size:11px;letter-spacing:.5px;padding:3px 10px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--line2);color:var(--muted);transition:all .15s;
+}
+.chain-badge.ok{border-color:color-mix(in srgb,var(--gold) 50%,transparent);color:var(--gold)}
+.chain-badge.ok:hover{background:color-mix(in srgb,var(--gold) 10%,transparent)}
+.acts{display:flex;gap:8px;margin-top:auto;padding-top:10px}
+.acts .go{
+  border:none;border-radius:9px;padding:8px 16px;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:1px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;
+  box-shadow:0 2px 8px rgba(184,134,11,.3);transition:transform .15s;
+}
+.acts .go:hover{transform:translateY(-1px)}
+.acts .save{
+  border:1px solid var(--line2);border-radius:9px;padding:8px 14px;cursor:pointer;
+  font-size:12px;letter-spacing:1px;background:transparent;color:var(--ink2);transition:all .15s;
+}
+.acts .save:hover{border-color:var(--gold);color:var(--gold)}
+.acts .save:disabled{opacity:.5;cursor:wait}
+.empty{grid-column:1/-1;text-align:center;padding:80px 0;color:var(--muted);font-size:14px;letter-spacing:1px;line-height:2}
+
+/* 存证弹窗 */
+.mask{position:fixed;inset:0;z-index:100;background:rgba(20,14,4,.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{
+  width:100%;max-width:440px;background:var(--paper);border:1px solid var(--line2);
+  border-radius:18px;padding:26px 26px 22px;box-shadow:0 24px 70px rgba(0,0,0,.3);
+  animation:up .3s ease;
+}
+.modal h3{font-family:var(--serif);font-size:19px;letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.modal .rows{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.modal .row{font-size:12px;line-height:1.5;min-width:0}
+.modal .row b{display:block;color:var(--muted);font-weight:600;letter-spacing:1px;margin-bottom:2px;font-size:11px}
+.modal .row code{
+  display:block;background:var(--paper2);border-radius:8px;padding:7px 10px;
+  font-size:11px;word-break:break-all;color:var(--ink2);
+}
+.modal a{color:var(--gold);font-size:12px;letter-spacing:.5px;word-break:break-all;overflow-wrap:anywhere}
+.modal .close{
+  margin-top:18px;width:100%;border:1px solid var(--line2);background:transparent;color:var(--ink2);
+  padding:9px 0;border-radius:10px;font-size:13px;letter-spacing:2px;cursor:pointer;
+}
+.modal .close:hover{border-color:var(--gold);color:var(--gold)}
+
+.toast{
+  position:fixed;bottom:34px;left:50%;transform:translateX(-50%);
+  z-index:120;background:var(--ink);color:var(--paper);
+  padding:10px 22px;border-radius:24px;font-size:13px;
+  box-shadow:0 8px 32px rgba(60,45,20,.16);animation:up .25s ease;
+}
+@media(max-width:640px){
+  .brand-title{font-size:30px;letter-spacing:8px}
+  .head{padding:20px 16px 0}
+  .toolbar{padding:16px 16px 4px}
+  .grid{padding:14px 16px 40px;grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="head">
+  <div>
+    <div class="brand-kicker">共享书库 · 链上存证</div>
+    <h1 class="brand-title">书城</h1>
+  </div>
+  <div class="head-right">
+    <a class="btn" href="bookshelf.html">🏠 我的书架</a>
+    <a class="btn" id="btnContract" href="#" target="_blank" rel="noopener" title="在 Blockscout 查看 BookRegistry 存证合约" hidden>⛓ 存证合约</a>
+    <button class="btn" id="btnTheme">🌙</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="search">🔍<input id="q" placeholder="搜索书名 / 作者 / 上传者…"></div>
+  <div class="sorts">
+    <button id="sortNew" class="on">最新上架</button>
+    <button id="sortHot">最多下载</button>
+  </div>
+  <span class="count" id="count"></span>
+</div>
+
+<main class="grid" id="grid"><div class="empty">正在打开书城…</div></main>
+
+<div class="mask" id="mask" hidden><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script src="upload-store.js"></script>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+/* 主题（与书架共用 key） */
+const TKEY="rc-shelf-dark";
+function applyTheme(){
+  const dark=localStorage.getItem(TKEY)==="1";
+  document.documentElement.dataset.theme=dark?"dark":"light";
+  $("#btnTheme").textContent=dark?"☀️":"🌙";
+}
+$("#btnTheme").onclick=()=>{localStorage.setItem(TKEY,localStorage.getItem(TKEY)==="1"?"0":"1");applyTheme();};
+applyTheme();
+
+let toastTimer=null;
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,2600);}
+
+let SORT="new",BOOKS=[];
+function fmtSize(n){return n>1048576?(n/1048576).toFixed(1)+" MB":Math.round(n/1024)+" KB";}
+
+function chainBadge(b){
+  if(b.chain.status==="confirmed")return `<span class="chain-badge ok" data-chain="${b.id}">⛓ 已上链存证 · 查看</span>`;
+  if(b.chain.status==="pending")return `<span class="chain-badge">⛓ 存证确认中…</span>`;
+  return "";
+}
+function cardHTML(b,i){
+  return `<div class="card" style="animation-delay:${Math.min(i,12)*50}ms">
+    <div class="cv"><img src="${API.coverURL(b.id)}" alt="" onerror="this.outerHTML='<span>${esc(b.title)}</span>'"></div>
+    <div class="info">
+      <div class="t" title="${esc(b.title)}">${esc(b.title)}</div>
+      <div class="a">${esc(b.author||"佚名")}</div>
+      <div class="meta">
+        <span>👤 ${esc(b.owner||"?")}</span>
+        <span>📖 ${b.total_chapters} 章</span>
+        <span>⬇️ ${b.downloads}</span>
+        <span>${fmtSize(b.size)}</span>
+      </div>
+      ${chainBadge(b)}
+      <div class="acts">
+        <button class="go" data-read="${b.id}">立即阅读</button>
+        <button class="save" data-save="${b.id}" data-fn="${esc(b.filename)}" data-title="${esc(b.title)}">存入书架</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const g=$("#grid");
+  if(!BOOKS.length){
+    g.innerHTML=`<div class="empty">书城里还没有共享的书<br>去书架上传一本，勾选「共享到书城」吧</div>`;
+  }else{
+    g.innerHTML=BOOKS.map(cardHTML).join("");
+  }
+  $("#count").textContent=BOOKS.length?`共 ${BOOKS.length} 本`:"";
+  g.querySelectorAll("[data-read]").forEach(el=>el.onclick=()=>{
+    location.href="index.html?pack=cloud:"+el.dataset.read;
+  });
+  g.querySelectorAll("[data-save]").forEach(el=>el.onclick=async()=>{
+    el.disabled=true;el.textContent="下载中…";
+    try{
+      const buf=await API.fetchPack(el.dataset.save);
+      await PackStore.put(el.dataset.fn,buf);
+      toast(`《${el.dataset.title}》已存入本地书架`);
+      el.textContent="已存入 ✓";
+    }catch(e){toast(e.message||"下载失败");el.textContent="存入书架";el.disabled=false;}
+  });
+  g.querySelectorAll("[data-chain]").forEach(el=>el.onclick=()=>showProof(el.dataset.chain));
+}
+
+async function showProof(id){
+  const b=BOOKS.find(x=>String(x.id)===String(id));
+  $("#modal").innerHTML=`<h3>⛓ 链上存证</h3><div class="rows"><div class="row">读取中…</div></div>`;
+  $("#mask").hidden=false;
+  try{
+    const d=await API.chainProof(id);
+    const p=d.proof;
+    $("#modal").innerHTML=`
+      <h3>⛓ 链上存证证书</h3>
+      <div class="rows">
+        <div class="row"><b>书名</b>${esc(p?p.title:(b?b.title:""))} ${p&&p.author?"· "+esc(p.author):""}</div>
+        <div class="row"><b>上传者</b>${esc(p?p.uploader:(b&&b.owner)||"")}</div>
+        ${p?`<div class="row"><b>存证时间</b>${new Date(p.timestamp*1000).toLocaleString("zh-CN")}</div>`:""}
+        <div class="row"><b>文件指纹 SHA-256</b><code>${esc(d.sha256)}</code></div>
+        <div class="row"><b>网络</b>${esc(p?p.network:"Injective EVM Testnet (1439)")}</div>
+        ${d.tx_url?`<div class="row"><b>存证交易</b><a href="${esc(d.tx_url)}" target="_blank" rel="noopener">${esc(d.tx||"")}</a></div>`:""}
+        ${p&&p.explorer?`<div class="row"><a href="${esc(p.explorer)}" target="_blank" rel="noopener">在 Blockscout 查看 BookRegistry 合约 →</a></div>`:""}
+      </div>
+      <button class="close" onclick="document.getElementById('mask').hidden=true">关 闭</button>`;
+  }catch(e){
+    $("#modal").innerHTML=`<h3>⛓ 链上存证</h3><div class="rows"><div class="row">${esc(e.message||"读取失败")}</div></div>
+      <button class="close" onclick="document.getElementById('mask').hidden=true">关 闭</button>`;
+  }
+}
+$("#mask").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.hidden=true;});
+
+async function load(){
+  try{
+    BOOKS=await API.store($("#q").value.trim(),SORT);
+    render();
+  }catch(e){
+    $("#grid").innerHTML=`<div class="empty">${esc(e.message||"加载失败")}<br>请确认后端服务已启动（config.js 中的 API_BASE）</div>`;
+  }
+}
+let debounce;
+$("#q").addEventListener("input",()=>{clearTimeout(debounce);debounce=setTimeout(load,300);});
+$("#sortNew").onclick=()=>{SORT="new";$("#sortNew").classList.add("on");$("#sortHot").classList.remove("on");load();};
+$("#sortHot").onclick=()=>{SORT="hot";$("#sortHot").classList.add("on");$("#sortNew").classList.remove("on");load();};
+/* 存证合约直达按钮（链未启用时保持隐藏） */
+API.chainInfo().then(ci=>{
+  if(ci.enabled&&ci.contract_url){const a=$("#btnContract");a.href=ci.contract_url;a.hidden=false;}
+}).catch(()=>{});
+load();
+})();
+</script>
+</body>
+</html>

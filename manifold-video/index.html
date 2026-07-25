@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="zh-CN" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "PingFang SC"; src: local("PingFang SC"); }
+      @font-face { font-family: "Noto Sans SC"; src: local("Noto Sans SC"); }
+      @font-face { font-family: "Songti SC"; src: local("Songti SC"); }
+      @font-face { font-family: "Noto Serif SC"; src: local("Noto Serif SC"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px; overflow: hidden;
+        background: #050505;
+      }
+      body {
+        font-family: "Helvetica Neue", "PingFang SC", "Noto Sans SC", sans-serif;
+        color: #f2f2f2;
+      }
+      .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+      .serif { font-family: "Songti SC", "Noto Serif SC", serif; }
+
+      #root { position: relative; width: 1920px; height: 1080px; background: #050505; }
+
+      /* ---------- persistent chrome ---------- */
+      .chrome { position: absolute; inset: 0; pointer-events: none; z-index: 50; }
+      .chrome .frame-h, .chrome .frame-v { position: absolute; background: rgba(255,255,255,.18); }
+      .chrome .frame-h { left: 0; right: 0; height: 1px; }
+      .chrome .frame-v { top: 0; bottom: 0; width: 1px; }
+      .wordmark {
+        position: absolute; top: 36px; left: 60px;
+        font-family: "JetBrains Mono", Menlo, monospace;
+        font-size: 15px; letter-spacing: .45em; color: rgba(255,255,255,.85);
+      }
+      .wordmark i { display: inline-block; width: 9px; height: 9px; border: 1px solid #fff; border-radius: 50%; margin-right: 14px; vertical-align: 1px; }
+      .pageno {
+        position: absolute; top: 36px; right: 60px;
+        font-family: "JetBrains Mono", Menlo, monospace;
+        font-size: 13px; letter-spacing: .3em; color: rgba(255,255,255,.4);
+      }
+      .coord-tag {
+        position: absolute; bottom: 34px; left: 60px;
+        font-family: "JetBrains Mono", Menlo, monospace;
+        font-size: 11px; letter-spacing: .3em; color: rgba(255,255,255,.3);
+      }
+      .coord-tag.r { left: auto; right: 60px; }
+      .grain {
+        position: absolute; inset: 0; opacity: .06; z-index: 60; pointer-events: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+
+      /* ---------- scenes ---------- */
+      .scene { position: absolute; inset: 0; visibility: hidden; }
+
+      /* S1 opening */
+      #s1 .axis-x { position: absolute; top: 50%; left: 240px; right: 240px; height: 1px; background: rgba(255,255,255,.25); transform-origin: left; }
+      #s1 .axis-y { position: absolute; left: 50%; top: 180px; bottom: 180px; width: 1px; background: rgba(255,255,255,.25); transform-origin: top; }
+      #s1 .big {
+        position: absolute; left: 0; right: 0; text-align: center;
+        font-size: 128px; font-weight: 700; letter-spacing: .04em; line-height: 1.15;
+      }
+      #s1 .b1 { top: 300px; }
+      #s1 .b2 { top: 470px; }
+      #s1 .wall {
+        position: absolute; left: 340px; right: 340px; top: 300px;
+        border: 1px solid rgba(255,255,255,.3); padding: 44px 50px;
+        font-size: 26px; line-height: 2.1; color: rgba(255,255,255,.75); text-align: justify;
+      }
+      #s1 .wall-tag {
+        position: absolute; top: -14px; left: 40px; background: #050505; padding: 0 14px;
+        font-family: "JetBrains Mono", Menlo, monospace; font-size: 13px; letter-spacing: .3em; color: rgba(255,255,255,.5);
+      }
+      #s1 .s1-cap {
+        position: absolute; left: 0; right: 0; bottom: 170px; text-align: center;
+        font-size: 34px; letter-spacing: .12em; color: #f2f2f2;
+      }
+      #s1 .s1-cap .dim { color: rgba(255,255,255,.45); }
+
+      /* S2 evolution */
+      #s2 .axis { position: absolute; left: 200px; right: 200px; top: 560px; height: 1px; background: rgba(255,255,255,.3); transform-origin: left; }
+      #s2 .gen { position: absolute; top: 300px; width: 440px; }
+      #s2 .g1 { left: 200px; } #s2 .g2 { left: 740px; } #s2 .g3 { left: 1280px; }
+      #s2 .gen .gnum { font-family: "JetBrains Mono", Menlo, monospace; font-size: 14px; letter-spacing: .35em; color: rgba(255,255,255,.45); }
+      #s2 .gen .gname { font-size: 52px; font-weight: 700; margin-top: 16px; }
+      #s2 .gen .gdesc { font-size: 19px; line-height: 1.9; color: rgba(255,255,255,.55); margin-top: 18px; }
+      #s2 .gen .dot { position: absolute; top: 256px; left: -6px; width: 11px; height: 11px; background: #050505; border: 1px solid #fff; border-radius: 50%; }
+      #s2 .g3 .gname { color: rgba(255,255,255,.9); }
+      #s2 .white-panel {
+        position: absolute; inset: 0; background: #f2f2f2; color: #050505;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        transform-origin: center;
+      }
+      #s2 .white-panel .wp-num { font-family: "JetBrains Mono", Menlo, monospace; font-size: 15px; letter-spacing: .5em; color: rgba(0,0,0,.5); }
+      #s2 .white-panel .wp-name { font-size: 170px; font-weight: 700; letter-spacing: .02em; margin-top: 20px; }
+      #s2 .white-panel .wp-sub { font-size: 34px; letter-spacing: .5em; margin-top: 26px; color: rgba(0,0,0,.7); }
+      #s2 .wp-line { position: absolute; bottom: 130px; font-size: 26px; letter-spacing: .08em; color: rgba(0,0,0,.75); }
+
+      /* S3 syntax */
+      #s3 .code-line {
+        position: absolute; left: 260px; right: 260px; top: 330px;
+        font-family: "JetBrains Mono", Menlo, monospace; font-size: 30px; line-height: 2; color: #f2f2f2;
+      }
+      #s3 .code-line .hl { border-bottom: 2px solid #fff; padding: 0 4px; }
+      #s3 .code-line .hl.pop { background: #f2f2f2; color: #050505; }
+      #s3 .split-l, #s3 .split-r { position: absolute; top: 620px; width: 700px; border: 1px solid rgba(255,255,255,.3); padding: 36px 40px; }
+      #s3 .split-l { left: 260px; }
+      #s3 .split-r { right: 260px; }
+      #s3 .split h4 { font-family: "JetBrains Mono", Menlo, monospace; font-size: 14px; letter-spacing: .4em; color: rgba(255,255,255,.5); font-weight: 400; margin-bottom: 22px; }
+      #s3 .split-l p { font-size: 22px; line-height: 2; color: rgba(255,255,255,.85); }
+      #s3 .split-r p { font-family: "JetBrains Mono", Menlo, monospace; font-size: 17px; line-height: 2.1; color: rgba(255,255,255,.7); }
+      #s3 .principles { position: absolute; bottom: 120px; left: 0; right: 0; text-align: center; font-family: "JetBrains Mono", Menlo, monospace; font-size: 15px; letter-spacing: .35em; color: rgba(255,255,255,.55); }
+      #s3 .scene-cap { position: absolute; top: 150px; left: 0; right: 0; text-align: center; font-size: 30px; letter-spacing: .2em; color: rgba(255,255,255,.8); }
+
+      /* S4 demo card */
+      #s4 .flash { position: absolute; inset: 0; background: #f2f2f2; opacity: 0; }
+      #s4 .t1 { position: absolute; top: 380px; left: 0; right: 0; text-align: center; font-family: "JetBrains Mono", Menlo, monospace; font-size: 22px; letter-spacing: .6em; color: rgba(255,255,255,.6); }
+      #s4 .t2 { position: absolute; top: 460px; left: 0; right: 0; text-align: center; font-size: 96px; font-weight: 700; letter-spacing: .1em; }
+      #s4 .t3 { position: absolute; top: 620px; left: 0; right: 0; text-align: center; font-size: 30px; letter-spacing: .3em; color: rgba(255,255,255,.55); }
+
+      /* S5 demo placeholder */
+      #s5 .ph-corner { position: absolute; width: 90px; height: 90px; border: 2px solid #f2f2f2; }
+      #s5 .c1 { top: 190px; left: 340px; border-right: none; border-bottom: none; }
+      #s5 .c2 { top: 190px; right: 340px; border-left: none; border-bottom: none; }
+      #s5 .c3 { bottom: 190px; left: 340px; border-right: none; border-top: none; }
+      #s5 .c4 { bottom: 190px; right: 340px; border-left: none; border-top: none; }
+      #s5 .ph-t1 { position: absolute; top: 400px; left: 0; right: 0; text-align: center; font-family: "JetBrains Mono", Menlo, monospace; font-size: 26px; letter-spacing: .5em; color: #f2f2f2; }
+      #s5 .ph-t2 { position: absolute; top: 470px; left: 0; right: 0; text-align: center; font-size: 30px; letter-spacing: .2em; color: rgba(255,255,255,.55); }
+      #s5 .ph-tc { position: absolute; top: 560px; left: 0; right: 0; text-align: center; font-family: "JetBrains Mono", Menlo, monospace; font-size: 40px; letter-spacing: .15em; color: rgba(255,255,255,.85); }
+      #s5 .ph-bar { position: absolute; left: 340px; right: 340px; bottom: 250px; height: 2px; background: rgba(255,255,255,.15); }
+      #s5 .ph-bar i { display: block; height: 100%; background: #f2f2f2; transform: scaleX(0); transform-origin: left; }
+      #s5 .ph-scan { position: absolute; left: 340px; right: 340px; height: 1px; background: rgba(255,255,255,.12); top: 190px; }
+
+      /* S6 products */
+      #s6 .s6-title { position: absolute; top: 130px; left: 0; }
+      #s6 .grid { position: absolute; left: 300px; right: 300px; top: 260px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255,255,255,.25); border: 1px solid rgba(255,255,255,.25); }
+      #s6 .card { background: #050505; padding: 34px 32px 30px; height: 250px; position: relative; }
+      #s6 .card .cidx { font-family: "JetBrains Mono", Menlo, monospace; font-size: 12px; letter-spacing: .3em; color: rgba(255,255,255,.4); display: flex; justify-content: space-between; }
+      #s6 .card .live { color: #f2f2f2; display: flex; align-items: center; gap: 8px; }
+      #s6 .card .live i { width: 7px; height: 7px; border-radius: 50%; background: #f2f2f2; }
+      #s6 .card .soon { color: rgba(255,255,255,.35); }
+      #s6 .card .cname { font-size: 44px; font-weight: 700; margin-top: 20px; }
+      #s6 .card .cen { font-family: "JetBrains Mono", Menlo, monospace; font-size: 12px; letter-spacing: .25em; color: rgba(255,255,255,.45); margin-top: 8px; text-transform: uppercase; }
+      #s6 .card .ctag { position: absolute; bottom: 26px; font-family: "JetBrains Mono", Menlo, monospace; font-size: 11px; letter-spacing: .12em; color: rgba(255,255,255,.35); }
+      #s6 .s6-cap { position: absolute; bottom: 110px; left: 0; right: 0; text-align: center; font-size: 28px; letter-spacing: .15em; color: rgba(255,255,255,.8); }
+
+      /* S7 chain */
+      #s7 .s7-title { position: absolute; top: 150px; left: 0; right: 0; text-align: center; font-size: 44px; font-weight: 700; letter-spacing: .2em; }
+      #s7 .s7-title .mono-sub { display: block; font-family: "JetBrains Mono", Menlo, monospace; font-size: 14px; letter-spacing: .5em; color: rgba(255,255,255,.45); margin-top: 18px; font-weight: 400; }
+      #s7 .chain-line { position: absolute; left: 360px; right: 360px; top: 460px; height: 1px; background: rgba(255,255,255,.35); transform-origin: left; }
+      #s7 .step { position: absolute; top: 360px; width: 250px; text-align: center; }
+      #s7 .st1 { left: 320px; } #s7 .st2 { left: 640px; } #s7 .st3 { left: 960px; } #s7 .st4 { left: 1280px; }
+      #s7 .step .snum { font-family: "JetBrains Mono", Menlo, monospace; font-size: 13px; letter-spacing: .35em; color: rgba(255,255,255,.45); }
+      #s7 .step .sname { font-size: 42px; font-weight: 700; margin-top: 14px; }
+      #s7 .step .sdesc { font-size: 16px; line-height: 1.9; color: rgba(255,255,255,.5); margin-top: 90px; }
+      #s7 .step .sdata { font-family: "JetBrains Mono", Menlo, monospace; font-size: 11px; letter-spacing: .2em; color: rgba(255,255,255,.4); margin-top: 14px; }
+      #s7 .hashroll { position: absolute; bottom: 130px; left: 0; right: 0; text-align: center; font-family: "JetBrains Mono", Menlo, monospace; font-size: 14px; letter-spacing: .12em; color: rgba(255,255,255,.4); line-height: 2.2; }
+      #s7 .hashroll b { color: rgba(255,255,255,.8); font-weight: 400; }
+
+      /* S8 vision */
+      #s8 svg { position: absolute; inset: 0; }
+      #s8 .v1 { position: absolute; top: 330px; left: 0; right: 0; text-align: center; font-size: 56px; font-weight: 700; letter-spacing: .1em; }
+      #s8 .v2 { position: absolute; top: 440px; left: 0; }
+      #s8 .v3 { position: absolute; top: 580px; left: 0; right: 0; text-align: center; font-family: "JetBrains Mono", Menlo, monospace; font-size: 15px; letter-spacing: .35em; color: rgba(255,255,255,.5); }
+
+      /* S9 cta */
+      #s9 .m-title { position: absolute; top: 280px; left: 0; }
+      #s9 .m-cn { position: absolute; top: 520px; left: 0; right: 0; text-align: center; font-family: "Songti SC", "Noto Serif SC", serif; font-size: 44px; letter-spacing: .8em; text-indent: .8em; color: rgba(255,255,255,.85); }
+      #s9 .m-team { position: absolute; bottom: 150px; left: 0; right: 0; text-align: center; font-family: "JetBrains Mono", Menlo, monospace; font-size: 14px; letter-spacing: .45em; color: rgba(255,255,255,.55); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="300" data-width="1920" data-height="1080">
+
+      <!-- ============ S1 OPENING 0-24 ============ -->
+      <div id="s1" class="scene clip" data-start="0" data-duration="24" data-track-index="0">
+        <div class="axis-x"></div>
+        <div class="axis-y"></div>
+        <div class="big b1">AI 很聪明。</div>
+        <div class="big b2">但它不会好好说话。</div>
+        <div class="wall">
+          <div class="wall-tag">AI OUTPUT — RAW</div>
+          何塞·阿尔卡蒂奥·布恩迪亚带着乌尔苏拉离开故土，翻越大山建立了马孔多。多年以后，奥雷里亚诺·布恩迪亚上校面对行刑队，将会想起父亲带他去见识冰块的那个遥远的下午。梅尔基亚德斯的羊皮卷上记载着这个家族百年的命运，而阿玛兰妲织了又拆的裹尸布，就像这个家族不断重复又不断遗忘的名字……
+        </div>
+        <div class="s1-cap">信息都在。<span class="dim">—— 联系，全藏在文字里。</span></div>
+      </div>
+
+      <!-- ============ S2 EVOLUTION 24-66 ============ -->
+      <div id="s2" class="scene clip" data-start="24" data-duration="42" data-track-index="0">
+        <div class="axis"></div>
+        <div class="gen g1">
+          <div class="dot"></div>
+          <div class="gnum">GEN.01 — 2015</div>
+          <div class="gname">Markdown</div>
+          <div class="gdesc">纯文本。给文本加了样式，<br>但机器不可理解。</div>
+        </div>
+        <div class="gen g2">
+          <div class="dot"></div>
+          <div class="gnum">GEN.02 — 2023</div>
+          <div class="gname">HTML / Canvas</div>
+          <div class="gdesc">可渲染。但没有语义，<br>输出不稳定。</div>
+        </div>
+        <div class="gen g3">
+          <div class="dot"></div>
+          <div class="gnum">GEN.03 — 2026</div>
+          <div class="gname">Manifold</div>
+          <div class="gdesc">内联标注 · 语义骨架。<br>人读得懂，机器也读得懂。</div>
+        </div>
+        <div class="white-panel">
+          <div class="wp-num">GEN.03 — THE THIRD GENERATION</div>
+          <div class="wp-name">MANIFOLD</div>
+          <div class="wp-sub">内联标注 · 语义骨架</div>
+          <div class="wp-line">Markdown 给文本加了样式。Manifold 给文本加了意义。</div>
+        </div>
+      </div>
+
+      <!-- ============ S3 SYNTAX 66-102 ============ -->
+      <div id="s3" class="scene clip" data-start="66" data-duration="36" data-track-index="0">
+        <div class="scene-cap">人读得懂。<span style="color:rgba(255,255,255,.45)">机器也读得懂。</span></div>
+        <div class="code-line">
+          <span class="hl" id="hl1">[[c:jose_arcadio]]何塞·阿尔卡蒂奥·布恩迪亚[[/]]</span> 是
+          <span class="hl" id="hl2">[[c:ursula]]乌尔苏拉[[/]]</span> 的
+          <span class="hl" id="hl3">[[r:spouse]]丈夫[[/]]</span>，
+          他们一起 <span class="hl" id="hl4">[[e:founding_macondo]]建立了马孔多[[/]]</span>。
+        </div>
+        <div class="split split-l" id="splitl">
+          <h4>HUMAN READS — 人读</h4>
+          <p>何塞·阿尔卡蒂奥·布恩迪亚是乌尔苏拉的丈夫，他们一起建立了马孔多。</p>
+        </div>
+        <div class="split split-r" id="splitr">
+          <h4>MACHINE READS — 机器读</h4>
+          <p id="machine-tree">
+            character: jose_arcadio<br>
+            character: ursula<br>
+            relation: spouse(jose_arcadio, ursula)<br>
+            event: founding_macondo
+          </p>
+        </div>
+        <div class="principles">降级可读 · 机器可解析 · 垂类可扩展 · 一次处理，终身使用</div>
+      </div>
+
+      <!-- ============ S4 DEMO CARD 102-112 ============ -->
+      <div id="s4" class="scene clip" data-start="102" data-duration="10" data-track-index="0">
+        <div class="flash"></div>
+        <div class="t1">NEXT — 90 SECONDS</div>
+        <div class="t2">DEMO 实录</div>
+        <div class="t3">读书 × 拆解</div>
+      </div>
+
+      <!-- ============ S5 DEMO PLACEHOLDER 112-202 ============ -->
+      <div id="s5" class="scene clip" data-start="112" data-duration="90" data-track-index="0">
+        <div class="ph-corner c1"></div>
+        <div class="ph-corner c2"></div>
+        <div class="ph-corner c3"></div>
+        <div class="ph-corner c4"></div>
+        <div class="ph-scan"></div>
+        <div class="ph-t1">DEMO SCREEN RECORDING</div>
+        <div class="ph-t2">90s — 此段替换为产品录屏</div>
+        <div class="ph-tc" id="timecode">00:00 / 01:30</div>
+        <div class="ph-bar"><i id="phbar"></i></div>
+      </div>
+
+      <!-- ============ S6 PRODUCTS 202-242 ============ -->
+      <div id="s6" class="scene clip" data-start="202" data-duration="40" data-track-index="0">
+        <img class="s6-title" src="assets/title-s6.png" width="1920" height="90" alt="ONE ENGINE / SIX VERTICALS" />
+        <div class="grid">
+          <div class="card" id="pc1">
+            <div class="cidx"><span>P.01</span><span class="live"><i></i>LIVE</span></div>
+            <div class="cname">读书</div>
+            <div class="cen">AI Reading Companion</div>
+            <div class="ctag">[[c]] [[r]] [[e]] [[sp]]</div>
+          </div>
+          <div class="card" id="pc2">
+            <div class="cidx"><span>P.02</span><span class="live"><i></i>LIVE</span></div>
+            <div class="cname">拆解</div>
+            <div class="cen">Deconstruct &amp; Rebuild</div>
+            <div class="ctag">[[p]] [[l]] [[f]] [[rt]]</div>
+          </div>
+          <div class="card" id="pc3">
+            <div class="cidx"><span>P.03</span><span class="soon">SOON</span></div>
+            <div class="cname">游戏攻略</div>
+            <div class="cen">Game Guide Mode</div>
+            <div class="ctag">[[boss]] [[phase]] [[skill]]</div>
+          </div>
+          <div class="card" id="pc4">
+            <div class="cidx"><span>P.04</span><span class="soon">SOON</span></div>
+            <div class="cname">历史时间线</div>
+            <div class="cen">History Timeline</div>
+            <div class="ctag">[[t]] [[event]] [[cau]]</div>
+          </div>
+          <div class="card" id="pc5">
+            <div class="cidx"><span>P.05</span><span class="soon">SOON</span></div>
+            <div class="cname">菜谱烹饪</div>
+            <div class="cen">Recipe Mode</div>
+            <div class="ctag">[[ing]] [[step]] [[dep]]</div>
+          </div>
+          <div class="card" id="pc6">
+            <div class="cidx"><span>P.06</span><span class="soon">SOON</span></div>
+            <div class="cname">知识学习</div>
+            <div class="cen">Knowledge Mode</div>
+            <div class="ctag">[[concept]] [[prereq]]</div>
+          </div>
+        </div>
+        <div class="s6-cap">同一个 Manifold 引擎。<span style="color:rgba(255,255,255,.45)">每个垂类，定义自己的标注集。</span></div>
+      </div>
+
+      <!-- ============ S7 CHAIN 242-272 ============ -->
+      <div id="s7" class="scene clip" data-start="242" data-duration="30" data-track-index="0">
+        <div class="s7-title">
+          链上内容层
+          <span class="mono-sub">ON-CHAIN CONTENT LAYER — BUILT ON INJECTIVE</span>
+        </div>
+        <div class="chain-line"></div>
+        <div class="step st1">
+          <div class="snum">STEP.01</div>
+          <div class="sname">存证</div>
+          <div class="sdesc">内容哈希上链<br>上链即确权，不可篡改</div>
+          <div class="sdata">GAS ≈ $0.0003 / 0.65s</div>
+        </div>
+        <div class="step st2">
+          <div class="snum">STEP.02</div>
+          <div class="sname">分发</div>
+          <div class="sdesc">去中心化存储<br>永久可访问，可验证</div>
+          <div class="sdata">IPFS / ARWEAVE</div>
+        </div>
+        <div class="step st3">
+          <div class="snum">STEP.03</div>
+          <div class="sname">流转</div>
+          <div class="sdesc">铸造为 NFT 交易<br>创作者自动分成</div>
+          <div class="sdata">NFT + ROYALTY</div>
+        </div>
+        <div class="step st4">
+          <div class="snum">STEP.04</div>
+          <div class="sname">发现</div>
+          <div class="sdesc">链上索引<br>好内容被世界看见</div>
+          <div class="sdata">ON-CHAIN INDEX</div>
+        </div>
+        <div class="hashroll">
+          content_hash: <b>0x8f3a…c41e</b> · creator: <b>inj1q8…m2xd</b> · timestamp: <b>2026-07-25T18:00:00Z</b><br>
+          上链即确权 · 每一次传播都可追溯 · 内容的价值，归内容本身
+        </div>
+      </div>
+
+      <!-- ============ S8 VISION 272-292 ============ -->
+      <div id="s8" class="scene clip" data-start="272" data-duration="20" data-track-index="0">
+        <svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none">
+          <g id="constellation" stroke="rgba(255,255,255,0.5)" stroke-width="1">
+            <line id="ln1" x1="420" y1="240" x2="780" y2="330" />
+            <line id="ln2" x1="780" y1="330" x2="1150" y2="230" />
+            <line id="ln3" x1="1150" y1="230" x2="1500" y2="360" />
+            <line id="ln4" x1="780" y1="330" x2="960" y2="540" />
+            <line id="ln5" x1="960" y1="540" x2="1500" y2="360" />
+            <line id="ln6" x1="420" y1="240" x2="960" y2="540" />
+          </g>
+          <g fill="#f2f2f2">
+            <circle class="star" cx="420" cy="240" r="5" />
+            <circle class="star" cx="780" cy="330" r="5" />
+            <circle class="star" cx="1150" cy="230" r="5" />
+            <circle class="star" cx="1500" cy="360" r="5" />
+            <circle class="star" cx="960" cy="540" r="5" />
+            <circle class="star" cx="620" cy="520" r="5" />
+          </g>
+        </svg>
+        <div class="v1">我们不是在做一个功能。</div>
+        <img class="v2" src="assets/text-s8.png" width="1920" height="90" alt="我们在定义 AI 输出的新标准。" />
+        <div class="v3">开放 · 可扩展的语义标注格式 × 基于区块链的内容生态</div>
+      </div>
+
+      <!-- ============ S9 CTA 292-300 ============ -->
+      <div id="s9" class="scene clip" data-start="292" data-duration="8" data-track-index="0">
+        <img class="m-title" src="assets/title-s9.png" width="1920" height="250" alt="MANIFOLD" />
+        <div class="m-cn">新坐标 · 新标准</div>
+        <div class="m-team">燕麦燕麦奶 × 梦之泪伤 — ADVENTUREX 2026 / XYZ</div>
+      </div>
+
+      <!-- ============ persistent chrome ============ -->
+      <div class="chrome">
+        <div class="frame-h" style="top: 90px;"></div>
+        <div class="frame-h" style="bottom: 90px;"></div>
+        <div class="wordmark"><i></i>MANIFOLD</div>
+        <div class="pageno" id="pageno">SEC.01 / 09</div>
+        <div class="coord-tag">COORD.X — SEMANTIC SKELETON</div>
+        <div class="coord-tag r">ADVENTUREX 2026 · XYZ</div>
+      </div>
+      <div class="grain"></div>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* ---------- helpers ---------- */
+      const show = (sel, at, dur = 0.8, from = {}) =>
+        tl.fromTo(sel, { autoAlpha: 0, ...from }, { autoAlpha: 1, duration: dur, ease: "power2.out" }, at);
+      const hide = (sel, at, dur = 0.6) =>
+        tl.to(sel, { autoAlpha: 0, duration: dur, ease: "power2.in" }, at);
+      // 初始：所有 scene 隐藏（visibility 由 CSS 初始 hidden + autoAlpha 控制）
+      gsap.set(".scene", { autoAlpha: 0 });
+
+      /* ============ S1 0-24 ============ */
+      tl.fromTo("#s1", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5 }, 0);
+      tl.fromTo("#s1 .axis-x", { scaleX: 0 }, { scaleX: 1, duration: 1.6, ease: "power3.inOut" }, 0.3);
+      tl.fromTo("#s1 .axis-y", { scaleY: 0 }, { scaleY: 1, duration: 1.6, ease: "power3.inOut" }, 0.5);
+      show("#s1 .b1", 1.8, 1.0, { y: 90 });
+      show("#s1 .b2", 5.0, 1.0, { y: 90 });
+      tl.to(["#s1 .b1", "#s1 .b2"], { opacity: 0.12, duration: 1.0 }, 9.0);
+      show("#s1 .wall", 9.6, 1.2, { y: 40 });
+      // 文字墙抖动（联系松动感）
+      tl.to("#s1 .wall", { x: 3, duration: 0.08 }, 11.0)
+        .to("#s1 .wall", { x: -3, duration: 0.08 }, 11.1)
+        .to("#s1 .wall", { x: 0, duration: 0.08 }, 11.2)
+        .to("#s1 .wall", { x: 2, duration: 0.08 }, 13.5)
+        .to("#s1 .wall", { x: -2, duration: 0.08 }, 13.6)
+        .to("#s1 .wall", { x: 0, duration: 0.08 }, 13.7);
+      show("#s1 .s1-cap", 16.5, 1.2, { y: 30 });
+      tl.to("#s1", { autoAlpha: 0, duration: 0.8 }, 23.2);
+      tl.set("#s1", { autoAlpha: 0 }, 24.0);
+
+      /* ============ S2 24-66 ============ */
+      tl.fromTo("#s2", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6 }, 24);
+      tl.fromTo("#s2 .axis", { scaleX: 0 }, { scaleX: 1, duration: 2.2, ease: "power3.inOut" }, 24.5);
+      show("#s2 .g1", 27, 0.9, { y: 60 });
+      show("#s2 .g2", 36, 0.9, { y: 60 });
+      show("#s2 .g3", 45, 0.9, { y: 60 });
+      // 反白面板冲屏
+      tl.fromTo("#s2 .white-panel", { autoAlpha: 0, scale: 1.06 }, { autoAlpha: 1, scale: 1, duration: 1.2, ease: "power3.out" }, 51);
+      show("#s2 .wp-num", 52.2, 0.8, { y: 30 });
+      show("#s2 .wp-name", 53.0, 1.0, { y: 60 });
+      show("#s2 .wp-sub", 54.4, 0.9, { y: 30 });
+      show("#s2 .wp-line", 58.0, 1.0, { y: 30 });
+      tl.to("#s2", { autoAlpha: 0, duration: 0.8 }, 65.2);
+      tl.set("#s2", { autoAlpha: 0 }, 66.0);
+
+      /* ============ S3 66-102 ============ */
+      tl.fromTo("#s3", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6 }, 66);
+      show("#s3 .scene-cap", 67, 0.9, { y: 30 });
+      tl.fromTo("#s3 .code-line", { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2 }, 69);
+      // 标注依次反色高亮
+      ["#hl1", "#hl2", "#hl3", "#hl4"].forEach((id, i) => {
+        tl.to(id, { backgroundColor: "#f2f2f2", color: "#050505", duration: 0.4 }, 73 + i * 1.4);
+      });
+      // 分屏：人读 / 机器读
+      show("#splitl", 81, 0.9, { x: -50 });
+      show("#splitr", 83, 0.9, { x: 50 });
+      tl.fromTo("#machine-tree", { opacity: 0.15 }, { opacity: 1, duration: 2.0 }, 86);
+      show("#s3 .principles", 94, 1.0, { y: 20 });
+      tl.to("#s3", { autoAlpha: 0, duration: 0.8 }, 101.2);
+      tl.set("#s3", { autoAlpha: 0 }, 102.0);
+
+      /* ============ S4 102-112 ============ */
+      tl.fromTo("#s4", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, 102);
+      tl.fromTo("#s4 .flash", { opacity: 0 }, { opacity: 1, duration: 0.15 }, 102)
+        .to("#s4 .flash", { opacity: 0, duration: 0.5 }, 102.2);
+      show("#s4 .t1", 102.8, 0.7, { y: 30 });
+      show("#s4 .t2", 104.2, 0.9, { scale: 0.92 });
+      show("#s4 .t3", 106.5, 0.8, { y: 20 });
+      tl.to("#s4", { autoAlpha: 0, duration: 0.6 }, 111.4);
+      tl.set("#s4", { autoAlpha: 0 }, 112.0);
+
+      /* ============ S5 112-202 占位 ============ */
+      tl.fromTo("#s5", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6 }, 112);
+      ["#s5 .c1", "#s5 .c2", "#s5 .c3", "#s5 .c4"].forEach((id, i) => {
+        tl.fromTo(id, { autoAlpha: 0, scale: 1.4 }, { autoAlpha: 1, scale: 1, duration: 0.5 }, 112.4 + i * 0.25);
+      });
+      show("#s5 .ph-t1", 113.5, 0.8);
+      show("#s5 .ph-t2", 114.5, 0.8);
+      show("#s5 .ph-tc", 115.5, 0.8);
+      // 进度条 90s 线性
+      tl.fromTo("#phbar", { scaleX: 0 }, { scaleX: 1, duration: 86, ease: "none" }, 116);
+      // 扫描线往返（transform，seekable）
+      tl.fromTo("#s5 .ph-scan", { y: 0 }, { y: 700, duration: 6, ease: "none", repeat: 14, yoyo: true }, 112);
+      // 时间码逐秒更新
+      const tc = document.getElementById("timecode");
+      const fmt = (s) => {
+        const m = String(Math.floor(s / 60)).padStart(2, "0");
+        const ss = String(s % 60).padStart(2, "0");
+        return m + ":" + ss + " / 01:30";
+      };
+      for (let s = 0; s <= 90; s++) {
+        tl.call(((sec) => () => { tc.textContent = fmt(sec); })(s), null, 112 + s);
+      }
+      tl.to("#s5", { autoAlpha: 0, duration: 0.8 }, 201.2);
+      tl.set("#s5", { autoAlpha: 0 }, 202.0);
+
+      /* ============ S6 202-242 ============ */
+      tl.fromTo("#s6", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6 }, 202);
+      show("#s6 .s6-title", 203, 0.9, { y: 40 });
+      ["#pc1", "#pc2", "#pc3", "#pc4", "#pc5", "#pc6"].forEach((id, i) => {
+        tl.fromTo(id, { autoAlpha: 0, y: 50 }, { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, 206 + i * 1.6);
+      });
+      // LIVE 呼吸点
+      tl.to("#pc1 .live i", { opacity: 0.2, duration: 0.8, repeat: 22, yoyo: true, ease: "sine.inOut" }, 208);
+      tl.to("#pc2 .live i", { opacity: 0.2, duration: 0.8, repeat: 22, yoyo: true, ease: "sine.inOut" }, 208.4);
+      show("#s6 .s6-cap", 236, 1.0, { y: 20 });
+      tl.to("#s6", { autoAlpha: 0, duration: 0.8 }, 241.2);
+      tl.set("#s6", { autoAlpha: 0 }, 242.0);
+
+      /* ============ S7 242-272 ============ */
+      tl.fromTo("#s7", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6 }, 242);
+      show("#s7 .s7-title", 243, 0.9, { y: 40 });
+      tl.fromTo("#s7 .chain-line", { scaleX: 0 }, { scaleX: 1, duration: 8, ease: "power2.inOut" }, 245);
+      ["#s7 .st1", "#s7 .st2", "#s7 .st3", "#s7 .st4"].forEach((id, i) => {
+        tl.fromTo(id, { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, duration: 0.8 }, 246 + i * 2.2);
+      });
+      show("#s7 .hashroll", 262, 1.2, { y: 20 });
+      tl.to("#s7", { autoAlpha: 0, duration: 0.8 }, 271.2);
+      tl.set("#s7", { autoAlpha: 0 }, 272.0);
+
+      /* ============ S8 272-292 ============ */
+      tl.fromTo("#s8", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6 }, 272);
+      tl.fromTo("#s8 .star", { autoAlpha: 0, scale: 0, transformOrigin: "center" }, { autoAlpha: 1, scale: 1, duration: 0.6, stagger: 0.4, ease: "back.out(2)" }, 273);
+      ["#ln1", "#ln2", "#ln3", "#ln4", "#ln5", "#ln6"].forEach((id, i) => {
+        const el = document.querySelector(id);
+        const len = el.getTotalLength();
+        el.style.strokeDasharray = len;
+        tl.fromTo(el, { strokeDashoffset: len }, { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut" }, 276 + i * 0.7);
+      });
+      show("#s8 .v1", 283, 0.9, { y: 40 });
+      show("#s8 .v2", 286, 0.9, { y: 40 });
+      show("#s8 .v3", 289, 0.8, { y: 20 });
+      tl.to("#s8", { autoAlpha: 0, duration: 0.7 }, 291.3);
+      tl.set("#s8", { autoAlpha: 0 }, 292.0);
+
+      /* ============ S9 292-300 ============ */
+      tl.fromTo("#s9", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5 }, 292);
+      show("#s9 .m-title", 292.5, 1.0, { y: 70 });
+      show("#s9 .m-cn", 295.0, 0.9, { y: 30 });
+      show("#s9 .m-team", 297.0, 0.8, { y: 20 });
+      tl.to("#s9", { opacity: 1, duration: 2.6 }, 297.4); // 定格至结束
+
+      /* ============ 页码 chrome ============ */
+      const pageno = document.getElementById("pageno");
+      const secs = [
+        [0, "SEC.01 / 09"], [24, "SEC.02 / 09"], [66, "SEC.03 / 09"],
+        [102, "SEC.04 / 09"], [112, "SEC.05 / 09"], [202, "SEC.06 / 09"],
+        [242, "SEC.07 / 09"], [272, "SEC.08 / 09"], [292, "SEC.09 / 09"],
+      ];
+      secs.forEach(([t, label]) => {
+        tl.call(((l) => () => { pageno.textContent = l; })(label), null, t + 0.01);
+      });
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

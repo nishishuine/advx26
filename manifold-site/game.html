@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游戏攻略 — MANIFOLD 流形</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="manifold-canvas"></canvas>
+
+<a class="back-link" href="index.html#products" data-cursor="BACK"><span class="bar"></span>MANIFOLD / PRODUCTS</a>
+
+<main>
+  <header class="detail-hero">
+    <div class="p-glyph big">游</div>
+    <div class="detail-meta">
+      <span>P.03</span>
+      <span>STATUS / SOON · 下一个</span>
+      <span>PRIORITY / 🥇 20/20</span>
+    </div>
+    <h1 class="detail-title">游戏攻略</h1>
+    <div class="detail-title-en">Game Guide Mode</div>
+    <p class="detail-lead">
+      AI 写攻略就是大段文字——BOSS 有几个阶段、技能怎么躲、装备哪里掉，
+      玩家需要在脑中自己构建战斗流程和决策树。
+      <strong>Manifold 把攻略变成可交互的战斗蓝图</strong>：
+      BOSS 技能时间线、决策树图、装备掉落关系网、地图交互——天生适合游戏化展示。
+    </p>
+  </header>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">P.03 / SPEC</div>
+        <h2 class="sec-title">标注集 <span class="stroke">&amp; 渲染</span></h2>
+      </div>
+    </div>
+    <div class="spec-grid reveal">
+      <div class="spec-cell">
+        <h3>ANNOTATION SET — 标注集</h3>
+        <ul>
+          <li><code>[[boss:BOSS-ID]]</code> — BOSS 标记</li>
+          <li><code>[[skill:技能名]]</code> — 技能标记</li>
+          <li><code>[[phase:阶段]]</code> — 战斗阶段</li>
+          <li><code>[[drop:装备]]</code> — 掉落 / 装备</li>
+          <li><code>[[choice:选择支]]</code> — 决策分支</li>
+          <li><code>[[map:地点]]</code> — 地图 / 地点</li>
+        </ul>
+      </div>
+      <div class="spec-cell">
+        <h3>RENDERING — 渲染冲击</h3>
+        <p>BOSS 技能时间线、决策树图、装备掉落关系网、地图交互。小说 = 线性叙事，游戏 = 分支叙事 + 数值体系——与文学模式、系统模式完全互补。</p>
+      </div>
+      <div class="spec-cell">
+        <h3>WHY — 为什么是下一个</h3>
+        <p>信息损失 ★★★★★ / 渲染冲击 ★★★★★ / 共鸣 ★★★★★ / 互补性 ★★★★★ —— 总分 20/20，路线图中优先级第一的扩展垂类。</p>
+      </div>
+      <div class="spec-cell">
+        <h3>SCENE — 典型场景</h3>
+        <p>玩家用 Manifold 制作《黑神话：悟空》全 BOSS 攻略包 → 上链存证 → 其他玩家链上发现并获取 → 在 Manifold 阅读器中打开，交互式学习 BOSS 打法。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">P.03 / DEMO</div>
+        <h2 class="sec-title">同一句话，<span class="stroke">两种读法</span></h2>
+      </div>
+    </div>
+    <div class="demo-panel reveal"><span class="hl">原文：</span>"艾尔登法环的最终 BOSS 拉达冈，第一阶段他会用黄金锤砸地，
+你要往左翻滚躲避。第二阶段他变成艾尔登之兽，会释放金色光环，
+你需要跑到地图边缘。"
+
+<span class="hl">Manifold 标注后：</span>
+[[boss:radagon]]拉达冈[[/]] | [[phase:1]]第一阶段[[/]] [[skill:hammer_slam]]黄金锤砸地[[/]]
+  → [[choice:左翻滚]]向左翻滚躲避[[/]]
+  → [[phase:2]]第二阶段[[/]] → [[boss:elden_beast]]艾尔登之兽[[/]]
+  → [[skill:golden_ring]]金色光环[[/]] → [[choice:run_to_edge]]跑到地图边缘[[/]]
+
+<span class="hl">渲染效果：</span>
+┌─────────────────────────────────────┐
+│ 拉达冈           进度: ██████░░░░  │
+│ ┌───────┐   ┌─────────┐           │
+│ │ phase1 │ → │ phase2  │           │
+│ │ 黄金锤  │   │ 金色光环 │           │
+│ │ 砸地   │   │ 地图AOE │           │
+│ │ ↓      │   │ ↓       │           │
+│ │ 左翻滚 │   │ 跑边缘  │           │
+│ └───────┘   └─────────┘           │
+│ [查看装备] [查看掉落] [查看剧情]    │
+└─────────────────────────────────────┘</div>
+  </section>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">NEXT / VERTICALS</div>
+        <h2 class="sec-title">探索其他 <span class="stroke">垂类</span></h2>
+      </div>
+    </div>
+    <div class="next-products reveal">
+      <a class="next-item" href="history.html"><div class="ni-idx">P.04</div><div class="ni-name">历史时间线</div><div class="ni-en">History Timeline</div></a>
+      <a class="next-item" href="recipe.html"><div class="ni-idx">P.05</div><div class="ni-name">菜谱烹饪</div><div class="ni-en">Recipe Mode</div></a>
+      <a class="next-item" href="knowledge.html"><div class="ni-idx">P.06</div><div class="ni-name">知识学习</div><div class="ni-en">Knowledge Mode</div></a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot-grid">
+    <div><b>MANIFOLD</b><br>给 AI 的输出装上语义骨架</div>
+    <div><b>TEAM</b><br>燕麦燕麦奶 × 梦之泪伤 · ADVENTUREX 2026</div>
+    <div><b>CHAIN</b><br>BUILT ON INJECTIVE</div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

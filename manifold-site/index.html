@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MANIFOLD 流形 — 给 AI 的输出装上语义骨架</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="manifold-canvas"></canvas>
+
+<nav>
+  <div class="nav-logo"><span class="dot"></span>MANIFOLD</div>
+  <div class="nav-links">
+    <a href="#solution">SOLUTION</a>
+    <a href="#syntax">SYNTAX</a>
+    <a href="#products">PRODUCTS</a>
+    <a href="#chain">CHAIN</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="hero-meta">
+      <span>ADVENTUREX 2026</span>
+      <span>TRACK / XYZ · 新坐标，新标准</span>
+      <span>TEAM / 燕麦燕麦奶 × 梦之泪伤</span>
+    </div>
+    <h1 class="hero-title">
+      <span class="hero-title-row">
+        <span>MANI</span><span class="stroke">FOLD</span>
+      </span>
+      <span class="hero-title-row">
+        <span class="stroke">流形</span>
+        <span class="hero-cn">语义骨架</span>
+      </span>
+    </h1>
+    <p class="hero-sub">
+      现在的 AI 很聪明，但表达方式很原始——一段接一段地往外吐文字。
+      <strong>Manifold 定义了 AI 输出的第三代格式</strong>：文本依然是文本，
+      但每一句话、每一个名词背后，都带着机器可解析的结构化语义。
+      就像 Markdown 给文本加了样式，Manifold 给文本加了<strong>意义</strong>。
+    </p>
+    <div class="hero-scroll">SCROLL ↓</div>
+    <div class="hero-coord">
+      <span>N 22°32′ — COORD.X</span>
+      <span>ONE ENGINE / SIX VERTICALS</span>
+      <span>E 114°03′ — COORD.Z</span>
+    </div>
+  </header>
+
+  <!-- ================= MARQUEE ================= -->
+  <div class="marquee">
+    <div class="marquee-track">
+      <span>[[c:角色]]</span><span><b>INLINE ANNOTATION</b></span>
+      <span>[[p:部件]]</span><span><b>SEMANTIC SKELETON</b></span>
+      <span>[[e:事件]]</span><span><b>新坐标 · 新标准</b></span>
+      <span>[[boss:BOSS]]</span><span><b>第三代输出格式</b></span>
+      <span>[[t:时间]]</span><span><b>ONE ENGINE, SIX VERTICALS</b></span>
+    </div>
+  </div>
+
+  <!-- ================= 01 SOLUTION ================= -->
+  <section id="solution">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">01 / SOLUTION</div>
+        <h2 class="sec-title">THE THIRD<br><span class="stroke">GENERATION</span></h2>
+      </div>
+      <div class="sec-note">
+        大家都在修"水管"（模型能力），<br>没人修"水龙头"（输出格式）。<br>Manifold 是第一个认真思考<br>"AI 应该用什么格式跟人类对话"的项目。
+      </div>
+    </div>
+
+    <div class="gen-axis reveal">
+      <div class="gen-cell">
+        <div class="gen-num">GEN.01 — 2015</div>
+        <div class="gen-name">Markdown</div>
+        <div class="gen-tag">纯文本 / 人类可读</div>
+        <div class="gen-desc">AI 的第一代输出格式。给文本加了样式，但机器不可理解——"何塞是乌尔苏拉的丈夫"对它来说只是一串字符。</div>
+        <div class="gen-badge">LEGACY</div>
+      </div>
+      <div class="gen-cell">
+        <div class="gen-num">GEN.02 — 2023</div>
+        <div class="gen-name">HTML / Canvas</div>
+        <div class="gen-tag">可渲染 / 无语义</div>
+        <div class="gen-desc">第二代格式。可以渲染出界面，但没有语义骨架，输出不稳定——每一次生成都像抽卡，无法沉淀为标准。</div>
+        <div class="gen-badge">UNSTABLE</div>
+      </div>
+      <div class="gen-cell active-gen">
+        <div class="gen-num">GEN.03 — 2026</div>
+        <div class="gen-name">Manifold</div>
+        <div class="gen-tag">内联标注 / 语义骨架</div>
+        <div class="gen-desc">第三代格式。AI 输出时在文字中嵌入结构化标记：人读得懂，机器也读得懂，渲染器还能交互——点击、查询、展开、重建。</div>
+        <div class="gen-badge">NEW COORDINATE</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 SYNTAX ================= -->
+  <section id="syntax">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">02 / SYNTAX</div>
+        <h2 class="sec-title">INLINE<br><span class="stroke">ANNOTATION</span></h2>
+      </div>
+      <div class="sec-note">
+        降级可读 · 机器可解析<br>垂类可扩展 · 一次处理终身使用
+      </div>
+    </div>
+
+    <div class="syntax-wrap reveal">
+      <div class="code-panel">
+<code>[[c:jose_arcadio]]何塞·阿尔卡蒂奥·布恩迪亚[[/]]
+是 [[c:ursula]]乌尔苏拉[[/]] 的 [[r:spouse]]丈夫[[/]]，
+他们一起 [[e:founding_macondo]]建立了马孔多[[/]]。
+
+[[p:sensor_01]]距离传感器[[/]] 通过 [[rt:signal]]信号[[/]]
+连接 [[l:2]]控制系统[[/]]，实现 [[f:detect]]检测人手靠近[[/]]。</code>
+      </div>
+      <div class="syntax-list">
+        <div class="syntax-item"><span class="sig">[[c:ID]]</span><span class="mean">角色标记 — 文学模式：人物、关系、事件、防剧透层级</span></div>
+        <div class="syntax-item"><span class="sig">[[p:ID]]</span><span class="mean">部件标记 — 系统模式：部件、层级、信号、重建步骤</span></div>
+        <div class="syntax-item"><span class="sig">[[boss:ID]]</span><span class="mean">游戏标记 — BOSS、阶段、技能、掉落、选择支</span></div>
+        <div class="syntax-item"><span class="sig">[[t:TIME]]</span><span class="mean">时间标记 — 历史模式：时间点、因果链、势力</span></div>
+        <div class="syntax-item"><span class="sig">[[ing:ID]]</span><span class="mean">食材标记 — 菜谱模式：步骤依赖、替代、温度时长</span></div>
+        <div class="syntax-item"><span class="sig">[[ / ]]</span><span class="mean">同一套底层语法，每个垂类定义自己的标注集——这就是"流形"：每个局部有自己的坐标系，整体连成一体。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 PRODUCTS ================= -->
+  <section id="products">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">03 / PRODUCTS</div>
+        <h2 class="sec-title">ONE ENGINE<br><span class="stroke">SIX VERTICALS</span></h2>
+      </div>
+      <div class="sec-note">
+        同一个 Manifold 引擎，<br>六个完全不同的垂类产品。<br>02 已上线 · 04 即将到来
+      </div>
+    </div>
+
+    <div class="products reveal">
+
+      <!-- 01 读书 -->
+      <a class="product" data-product-link="reader" href="#" target="_blank" data-cursor="ENTER ↗">
+        <div class="p-index"><span>P.01</span><span class="p-status"><span class="blink"></span>LIVE</span></div>
+        <div class="p-name">读书</div>
+        <div class="p-en">AI Reading Companion</div>
+        <div class="p-desc">当你读长篇、读复杂叙事时，替你记住"谁是谁"的 AI 阅读伴侣。点击角色名弹出卡片，关系图随阅读进度展开——绝不剧透。《百年孤独》17 个何塞，再也不崩溃。</div>
+        <div class="p-foot">
+          <span class="p-tags">[[c]] [[r]] [[e]] [[sp]] — 文学标注集</span>
+          <span class="p-arrow"><span class="bar"></span>↗</span>
+        </div>
+        <div class="p-glyph">读</div>
+      </a>
+
+      <!-- 02 拆解 -->
+      <a class="product" data-product-link="deconstruct" href="#" target="_blank" data-cursor="ENTER ↗">
+        <div class="p-index"><span>P.02</span><span class="p-status"><span class="blink"></span>LIVE</span></div>
+        <div class="p-name">拆解</div>
+        <div class="p-en">Deconstruct &amp; Rebuild</div>
+        <div class="p-desc">当你想理解一个东西怎么工作、怎么造出来时，AI 帮你一层层拆开看。结构 / 信号 / 能量 / 因果四种视图自由切换，还能进入重建模式：零件清单 → 连接关系 → 分步教程 → 验收标准。</div>
+        <div class="p-foot">
+          <span class="p-tags">[[p]] [[l]] [[f]] [[rt]] — 系统标注集</span>
+          <span class="p-arrow"><span class="bar"></span>↗</span>
+        </div>
+        <div class="p-glyph">拆</div>
+      </a>
+
+      <!-- 03 游戏 -->
+      <a class="product" href="game.html" data-cursor="VIEW →">
+        <div class="p-index"><span>P.03</span><span class="p-status soon"><span class="blink"></span>SOON</span></div>
+        <div class="p-name">游戏攻略</div>
+        <div class="p-en">Game Guide Mode</div>
+        <div class="p-desc">BOSS 有几个阶段、技能怎么躲、装备哪里掉——把大段文字攻略变成技能时间线、决策树和掉落关系网。分支叙事 + 数值体系，天生适合结构化展示。</div>
+        <div class="p-foot">
+          <span class="p-tags">[[boss]] [[phase]] [[skill]] [[drop]]</span>
+          <span class="p-arrow"><span class="bar"></span>→</span>
+        </div>
+        <div class="p-glyph">游</div>
+      </a>
+
+      <!-- 04 历史 -->
+      <a class="product" href="history.html" data-cursor="VIEW →">
+        <div class="p-index"><span>P.04</span><span class="p-status soon"><span class="blink"></span>SOON</span></div>
+        <div class="p-name">历史时间线</div>
+        <div class="p-en">History Timeline Mode</div>
+        <div class="p-desc">历史是因果链 + 时间线 + 多线叙事。Manifold 把丢失的时间关系、因果关系、多方势力互动全部找回来——交互式时间线、因果链力导向图、势力消长图，极具史诗感。</div>
+        <div class="p-foot">
+          <span class="p-tags">[[t]] [[event]] [[cau]] [[force]]</span>
+          <span class="p-arrow"><span class="bar"></span>→</span>
+        </div>
+        <div class="p-glyph">史</div>
+      </a>
+
+      <!-- 05 菜谱 -->
+      <a class="product" href="recipe.html" data-cursor="VIEW →">
+        <div class="p-index"><span>P.05</span><span class="p-status soon"><span class="blink"></span>SOON</span></div>
+        <div class="p-name">菜谱烹饪</div>
+        <div class="p-en">Recipe Mode</div>
+        <div class="p-desc">菜谱的文字描述丢失了大量关键信息：步骤依赖、食材替代、失败排查。Manifold 渲染出流程图、食材关系网、步骤依赖树——每个人都要吃饭，零门槛理解。</div>
+        <div class="p-foot">
+          <span class="p-tags">[[ing]] [[step]] [[dep]] [[alt]]</span>
+          <span class="p-arrow"><span class="bar"></span>→</span>
+        </div>
+        <div class="p-glyph">肴</div>
+      </a>
+
+      <!-- 06 知识学习 -->
+      <a class="product" href="knowledge.html" data-cursor="VIEW →">
+        <div class="p-index"><span>P.06</span><span class="p-status soon"><span class="blink"></span>SOON</span></div>
+        <div class="p-name">知识学习</div>
+        <div class="p-en">Knowledge Mode</div>
+        <div class="p-desc">任何知识体系都可以被拆解成概念网络：前置依赖、层级结构、关联路径。让 AI 的输出从"讲义"变成"可导航的知识地图"——学习的路标，而不是一堵文字墙。</div>
+        <div class="p-foot">
+          <span class="p-tags">[[concept]] [[prereq]] [[path]]</span>
+          <span class="p-arrow"><span class="bar"></span>→</span>
+        </div>
+        <div class="p-glyph">知</div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ================= 04 CHAIN ================= -->
+  <section id="chain">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">04 / CHAIN</div>
+        <h2 class="sec-title">ON-CHAIN<br><span class="stroke">CONTENT LAYER</span></h2>
+      </div>
+      <div class="sec-note">
+        好内容值得被永久保存。<br>基于 Injective 区块链 ——<br>上链即确权，每次传播可追溯。
+      </div>
+    </div>
+
+    <div class="chain-grid reveal">
+      <div class="chain-cell">
+        <div class="chain-step">STEP.01</div>
+        <div class="chain-name">存证</div>
+        <div class="chain-desc">.manifest 内容包哈希上链：内容指纹 + 创作者地址 + 时间戳。不可篡改，上链即确权。</div>
+        <div class="chain-data">GAS ≈ $0.0003 / 0.65s</div>
+      </div>
+      <div class="chain-cell">
+        <div class="chain-step">STEP.02</div>
+        <div class="chain-name">分发</div>
+        <div class="chain-desc">内容包存储于 IPFS / Arweave 去中心化网络，链上哈希指向存储地址，可验证、永久可访问。</div>
+        <div class="chain-data">IPFS / ARWEAVE</div>
+      </div>
+      <div class="chain-cell">
+        <div class="chain-step">STEP.03</div>
+        <div class="chain-name">流转</div>
+        <div class="chain-desc">内容包可铸造为 NFT 交易流转，创作者获得版税，每次转售自动分成，无中间商。</div>
+        <div class="chain-data">NFT + ROYALTY</div>
+      </div>
+      <div class="chain-cell">
+        <div class="chain-step">STEP.04</div>
+        <div class="chain-name">发现</div>
+        <div class="chain-desc">按垂类、热度、创作者维度索引链上内容。你的《百年孤独》图谱、黑神话攻略包，都能被世界发现。</div>
+        <div class="chain-data">ON-CHAIN INDEX</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="foot-title reveal">
+    MANIFOLD<br><span class="stroke">新坐标 · 新标准</span>
+  </div>
+  <div class="foot-grid">
+    <div>
+      <b>TEAM</b><br>燕麦燕麦奶 × 梦之泪伤<br>ADVENTUREX 2026 — XYZ
+    </div>
+    <div>
+      <b>SOLUTION</b><br>AI 输出的第三代格式<br>内联标注 · 语义骨架
+    </div>
+    <div>
+      <b>PRODUCTS</b><br>读书 / 拆解 — LIVE<br>游戏 / 历史 / 菜谱 / 知识 — SOON
+    </div>
+    <div>
+      <b>CHAIN</b><br>BUILT ON INJECTIVE<br>EVM · IBC · 0.65s FINALITY
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

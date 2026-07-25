@@ -110,6 +110,8 @@ body::after{
   display:flex;align-items:center;gap:6px;
 }
 .up-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(184,134,11,.4)}
+.icon-btn.wide{width:auto;padding:0 14px;gap:6px;font-size:13px;text-decoration:none;letter-spacing:1px}
+.user-name{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── 搁板舞台 ── */
 .stage{
@@ -254,6 +256,15 @@ body::after{
   transform:translateY(6px);transition:transform .35s;
 }
 .book-wrap:hover .veil-go{transform:none}
+/* 云端书：共享开关 */
+.veil-share{
+  position:absolute;top:8px;left:8px;
+  font-size:10px;letter-spacing:.5px;padding:3px 9px;border-radius:20px;cursor:pointer;
+  background:rgba(246,238,219,.16);color:rgba(246,238,219,.85);transition:all .15s;
+}
+.veil-share.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#1d1507}
+.veil-share:hover{transform:scale(1.05)}
+.veil-chain{margin-top:4px;font-size:10px;color:var(--gold2);letter-spacing:.5px}
 /* 上传书的下架钮 */
 .veil-x{
   position:absolute;top:8px;right:8px;
@@ -341,6 +352,38 @@ body::after{
 .drop-t{font-family:var(--serif);font-size:22px;font-weight:800;color:var(--gold);letter-spacing:3px}
 .drop-s{margin-top:8px;font-size:12px;color:var(--muted);letter-spacing:1px}
 
+/* ── 存证弹窗 ── */
+.mask{position:fixed;inset:0;z-index:130;background:rgba(20,14,4,.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{
+  width:100%;max-width:480px;max-height:82vh;overflow:auto;
+  background:var(--paper);border:1px solid var(--line2);
+  border-radius:18px;padding:26px 26px 22px;box-shadow:0 24px 70px rgba(0,0,0,.3);
+  animation:slotIn .3s ease;
+}
+.modal h3{font-family:var(--serif);font-size:19px;letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.modal .rows{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.modal .row{font-size:12px;line-height:1.5;min-width:0}
+.modal .row b{display:block;color:var(--muted);font-weight:600;letter-spacing:1px;margin-bottom:2px;font-size:11px}
+.modal .row code{
+  display:block;background:var(--paper2);border-radius:8px;padding:7px 10px;
+  font-size:11px;word-break:break-all;color:var(--ink2);
+}
+.modal a{color:var(--gold);font-size:12px;letter-spacing:.5px;word-break:break-all;overflow-wrap:anywhere}
+.modal .close{
+  margin-top:18px;width:100%;border:1px solid var(--line2);background:transparent;color:var(--ink2);
+  padding:9px 0;border-radius:10px;font-size:13px;letter-spacing:2px;cursor:pointer;
+}
+.modal .close:hover{border-color:var(--gold);color:var(--gold)}
+.chain-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  background:var(--paper2);border-radius:10px;
+}
+.chain-item .ci-title{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chain-item .ci-status{font-size:11px;letter-spacing:.5px;white-space:nowrap}
+.chain-item .ci-status.ok{color:var(--gold)}
+.chain-item .ci-status.no{color:var(--muted)}
+.chain-item .ci-link{font-size:11px;white-space:nowrap;text-decoration:none}
+
 /* ── toast ── */
 .toast{
   position:fixed;bottom:34px;left:50%;transform:translateX(-50%);
@@ -370,9 +413,12 @@ body::after{
     <h1 class="brand-title">藏书阁</h1>
   </div>
   <div class="head-right">
+    <a class="icon-btn wide" href="store.html" title="逛逛大家共享的书">🏪 书城</a>
+        <a class="icon-btn wide" id="btnContract" href="#" target="_blank" rel="noopener" title="在 Blockscout 查看 BookRegistry 存证合约" hidden>⛓ 存证合约</a>
     <button class="up-btn" id="btnUpload" title="上传 .bookpack 书包">＋<span> 上架书籍</span></button>
     <input type="file" id="fileInput" accept=".bookpack,.zip" multiple hidden>
     <button class="icon-btn" id="btnTheme" title="切换明/暗">🌙</button>
+    <button class="icon-btn wide" id="btnUser" title="账号">👤</button>
   </div>
 </header>
 
@@ -397,19 +443,23 @@ body::after{
   </div>
 </div>
 
+<div class="mask" id="mask" hidden><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast" hidden></div>
 
 <script src="vendor/jszip.min.js"></script>
+<script src="config.js"></script>
+<script src="api.js"></script>
 <script src="upload-store.js"></script>
 <script>
 (function(){
 "use strict";
 const $=s=>document.querySelector(s);
 
-/* ── 默认书目：这两本；其余靠用户自行上传 .bookpack 文件 ── */
+/* ── 默认书目：未登录时展示这三本静态书；登录后改由云端书库接管 ── */
 const DEFAULT_BOOKS=[
   {file:"百年孤独.bookpack",            open:"index.html"},
   {file:"生命中不能承受之轻.bookpack",   open:"index.html?pack="+encodeURIComponent("生命中不能承受之轻.bookpack")},
+  {file:"月亮和六便士.bookpack",         open:"index.html?pack="+encodeURIComponent("月亮和六便士.bookpack")},
 ];
 const SHELF_BOOKS=DEFAULT_BOOKS;
 
@@ -494,6 +544,14 @@ async function metaFromZip(zip,fallbackTitle){
 async function loadBook(entry){
   const fallback=entry.file.replace(/^upload:/,"").replace(/\.bookpack$/i,"");
   const meta={title:fallback,author:"",total:DEFAULT_TOTAL,cover:null,failed:false};
+  /* 云端书：元信息已由 API 返回，不下载整包 */
+  if(entry.cloud){
+    const b=entry.book;
+    meta.title=b.title;meta.author=b.author||"";
+    meta.total=b.total_chapters||DEFAULT_TOTAL;
+    meta.cover=API.coverURL(b.id);
+    return meta;
+  }
   try{
     if(typeof JSZip==="undefined")throw 0;
     let buf;
@@ -501,7 +559,7 @@ async function loadBook(entry){
       buf=await PackStore.get(entry.file.slice(7));
       if(!buf)throw 0;
     }else{
-      const res=await fetch(encodeURI(entry.file));
+      const res=await fetch(encodeURI(entry.file),{cache:"no-cache"});
       if(!res.ok)throw 0;
       buf=await res.arrayBuffer();
     }
@@ -515,6 +573,7 @@ async function loadBook(entry){
 function sampleSpineColor(url){
   return new Promise(resolve=>{
     const img=new Image();
+    img.crossOrigin="anonymous";
     img.onload=()=>{
       try{
         const c=document.createElement("canvas");c.width=8;c.height=32;
@@ -536,15 +595,61 @@ function hashSpine(title){
 }
 
 /* ── 渲染 ── */
-let ENTRIES=[],METAS={},PAGE=0;
+let ENTRIES=[],METAS={},PAGE=0,CLOUD=[],CHAIN_INFO=null;
+
+/* ── 存证总览弹窗：书架每本云端书的链上状态 + 合约信息 ── */
+function escHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function showChainModal(){
+  const ci=CHAIN_INFO;if(!ci)return;
+  const items=CLOUD.map(b=>{
+    const s=b.chain.status;
+    const badge=s==="confirmed"?'<span class="ci-status ok">⛓ 已上链</span>'
+      :s==="pending"?'<span class="ci-status no">⏳ 确认中</span>'
+      :s==="failed"?'<span class="ci-status no">⚠ 失败</span>'
+      :'<span class="ci-status no">未存证</span>';
+    const link=b.chain.tx_url?`<a class="ci-link" href="${escHtml(b.chain.tx_url)}" target="_blank" rel="noopener">交易 ↗</a>`:"";
+    return `<div class="chain-item"><div class="ci-title">${escHtml(b.title)}</div>${badge}${link}</div>`;
+  }).join("");
+  const listHTML=API.token()
+    ?(items||`<div class="row" style="color:var(--muted)">云端书库还没有书，上传后会自动存证</div>`)
+    :`<div class="row" style="color:var(--muted)">登录后可查看自己书库里每本书的存证状态</div>`;
+  $("#modal").innerHTML=`
+    <h3>⛓ 链上存证总览</h3>
+    <div class="rows">
+      ${listHTML}
+      <div class="row"><b>存证合约 BookRegistry</b><code>${escHtml(ci.registry)}</code></div>
+      <div class="row"><b>网络</b>${escHtml(ci.network)}</div>
+      <div class="row"><a href="${escHtml(ci.contract_url)}" target="_blank" rel="noopener">在 Blockscout 查看合约与全部存证交易 →</a></div>
+    </div>
+    <button class="close" onclick="document.getElementById('mask').hidden=true">关 闭</button>`;
+  $("#mask").hidden=false;
+}
 
 async function refreshEntries(){
   const ups=await PackStore.keys();
-  ENTRIES=SHELF_BOOKS.concat(ups.map(name=>({
-    file:"upload:"+name,
-    open:"index.html?pack="+encodeURIComponent("upload:"+name),
-    upload:true,name
-  })));
+  CLOUD=[];
+  if(API.token()){
+    try{
+      CLOUD=await API.myBooks();
+      /* 书城共享书也上架：他人的书只读（不能删除/改共享） */
+      const mine=new Set(CLOUD.map(b=>b.id));
+      const store=await API.store();
+      CLOUD=CLOUD.concat(store.filter(b=>!mine.has(b.id)));
+    }
+    catch(e){if(!API.token())toast("登录已过期，请重新登录");}
+  }
+  /* 登录后云端书库接管，静态默认书仅未登录时展示，避免重复 */
+  ENTRIES=(API.token()?[]:SHELF_BOOKS)
+    .concat(CLOUD.map(b=>({
+      file:"cloud:"+b.id,
+      open:"index.html?pack=cloud:"+b.id,
+      cloud:true,book:b
+    })))
+    .concat(ups.map(name=>({
+      file:"upload:"+name,
+      open:"index.html?pack="+encodeURIComponent("upload:"+name),
+      upload:true,name
+    })));
 }
 
 function slotHTML(entry,i){
@@ -567,8 +672,12 @@ function slotHTML(entry,i){
         <div class="face front">${cover}
           <div class="veil">
             ${entry.upload?`<div class="veil-x" data-del="${entry.name}" title="从书架移除">×</div>`:""}
+            ${entry.cloud&&entry.book.mine?`<div class="veil-x" data-delcloud="${entry.book.id}" data-title="${meta.title}" title="从云端书库删除">×</div>`:""}
+            ${entry.cloud&&entry.book.mine?`<div class="veil-share ${entry.book.is_public?"on":""}" data-share="${entry.book.id}" title="共享后会出现在书城">${entry.book.is_public?"✓ 已共享":"未共享"}</div>`:""}
+            ${entry.cloud&&!entry.book.mine?`<div class="veil-share on" title="来自书城的共享书">👤 ${entry.book.owner||"共享"}</div>`:""}
             <div class="veil-title">${meta.title}</div>
             ${meta.author?`<div class="veil-author">${meta.author}</div>`:""}
+            ${entry.cloud&&entry.book.chain.status==="confirmed"?`<div class="veil-chain">⛓ 已上链存证</div>`:""}
             <div class="veil-go">${go} →</div>
           </div>
         </div>
@@ -620,6 +729,33 @@ function render(){
       toast("已下架");
     });
   });
+  /* 云端书：删除 */
+  document.querySelectorAll("[data-delcloud]").forEach(el=>{
+    el.addEventListener("click",async e=>{
+      e.stopPropagation();
+      if(!confirm(`把《${el.dataset.title}》从云端书库删除？共享也会一并下架`))return;
+      try{
+        await API.deleteBook(el.dataset.delcloud);
+        localStorage.removeItem(progressKey("cloud:"+el.dataset.delcloud));
+        await refreshEntries();render();
+        toast("已从云端删除");
+      }catch(err){toast(err.message||"删除失败");}
+    });
+  });
+  /* 云端书：共享开关 */
+  document.querySelectorAll("[data-share]").forEach(el=>{
+    el.addEventListener("click",async e=>{
+      e.stopPropagation();
+      const id=+el.dataset.share;
+      const b=CLOUD.find(x=>x.id===id);if(!b)return;
+      try{
+        await API.setPublic(id,!b.is_public);
+        b.is_public=!b.is_public;
+        render();
+        toast(b.is_public?"已共享到书城":"已从书城下架");
+      }catch(err){toast(err.message||"操作失败");}
+    });
+  });
 }
 
 $("#pgPrev").addEventListener("click",()=>{PAGE--;render();});
@@ -636,11 +772,24 @@ window.addEventListener("resize",()=>{
 async function handleFiles(files){
   const packs=[...files].filter(f=>/\.(bookpack|zip)$/i.test(f.name));
   if(!packs.length){toast("请选择 .bookpack 文件");return;}
+  const logged=!!API.token();
   for(const f of packs){
-    try{
-      await PackStore.put(f.name,await f.arrayBuffer());
-      toast(`已上架《${f.name.replace(/\.bookpack$/i,"")}》`);
-    }catch(e){toast(`《${f.name}》上架失败`);}
+    const title=f.name.replace(/\.bookpack$/i,"");
+    if(logged){
+      /* 登录后上传到云端书库，可选共享到书城 */
+      const share=confirm(`《${title}》将上传到你的云端书库。\n\n同时共享到书城供大家阅读吗？（可随时在书架上开关）\n确定=共享，取消=仅自己可见`);
+      toast(`正在上传《${title}》…`);
+      try{
+        const b=await API.uploadBook(f,share);
+        toast(`《${b.title}》已上架到云端${share?"，并共享到书城":""}${b.chain.enabled?"，链上存证中…":""}`);
+      }catch(e){toast(`《${title}》上传失败：${e.message||""}`);}
+    }else{
+      /* 未登录：仍存本地 IndexedDB */
+      try{
+        await PackStore.put(f.name,await f.arrayBuffer());
+        toast(`已上架《${title}》（仅本地，登录后可存云端）`);
+      }catch(e){toast(`《${f.name}》上架失败`);}
+    }
   }
   await refreshEntries();
   await ensureMetas(ENTRIES.filter(e=>!METAS[e.file]));
@@ -659,6 +808,25 @@ window.addEventListener("drop",e=>{
   if(e.dataTransfer&&e.dataTransfer.files.length)handleFiles(e.dataTransfer.files);
 });
 
+/* ── 账号入口 ── */
+function setupUserBtn(){
+  const u=API.user();
+  const btn=$("#btnUser");
+  if(u&&API.token()){
+    btn.innerHTML=`👤 <span class="user-name">${u.username}</span>`;
+    btn.title="点击退出登录";
+    btn.onclick=()=>{
+      if(confirm(`退出登录「${u.username}」？云端书库将从书架隐藏`)){
+        API.logout();location.reload();
+      }
+    };
+  }else{
+    btn.innerHTML="👤 登录";
+    btn.title="登录后书籍存入云端书库";
+    btn.onclick=()=>location.href="auth.html";
+  }
+}
+
 /* ── 启动 ── */
 async function ensureMetas(entries){
   await Promise.all(entries.map(async e=>{
@@ -668,6 +836,16 @@ async function ensureMetas(entries){
   }));
 }
 async function boot(){
+  setupUserBtn();
+  /* 存证合约按钮：弹窗展示书架每本云端书的存证信息（链未启用时保持隐藏） */
+  API.chainInfo().then(ci=>{
+    if(ci.enabled&&ci.contract_url){
+      CHAIN_INFO=ci;
+      const a=$("#btnContract");
+      a.href=ci.contract_url;a.hidden=false;
+      a.onclick=e=>{e.preventDefault();showChainModal();};
+    }
+  }).catch(()=>{});
   $("#stage").innerHTML=`<div class="empty">正在上架…</div>`;
   await refreshEntries();
   await ensureMetas(ENTRIES);
@@ -681,6 +859,7 @@ async function boot(){
     $("#stage").after(tip);
   }
 }
+$("#mask").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.hidden=true;});
 boot();
 })();
 </script>

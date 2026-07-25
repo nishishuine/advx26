@@ -1,0 +1,29 @@
+# Render 一键部署蓝图：仓库根目录放置本文件后，
+# 在 Render 选 New → Blueprint 即可自动创建 Web Service + PostgreSQL
+services:
+  - type: web
+    name: reading-buddy-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reading-buddy-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: INJ_RPC_URL
+        value: https://k8s.testnet.json-rpc.injective.network/
+      - key: CHAIN_EXPLORER
+        value: https://testnet.blockscout.injective.network
+      # 以下两项部署合约后在 Render 控制台手动填写：
+      # CHAIN_PRIVATE_KEY / BOOK_REGISTRY_ADDRESS
+
+databases:
+  - name: reading-buddy-db
+    plan: free

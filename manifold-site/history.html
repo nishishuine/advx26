@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>历史时间线 — MANIFOLD 流形</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="manifold-canvas"></canvas>
+
+<a class="back-link" href="index.html#products" data-cursor="BACK"><span class="bar"></span>MANIFOLD / PRODUCTS</a>
+
+<main>
+  <header class="detail-hero">
+    <div class="p-glyph big">史</div>
+    <div class="detail-meta">
+      <span>P.04</span>
+      <span>STATUS / SOON</span>
+      <span>PRIORITY / 🥈 19/20</span>
+    </div>
+    <h1 class="detail-title">历史时间线</h1>
+    <div class="detail-title-en">History Timeline Mode</div>
+    <p class="detail-lead">
+      历史是因果链 + 时间线 + 多线叙事。用文字描述时，
+      <strong>时间关系、因果关系、多方势力的互动全部丢失</strong>。
+      Manifold 把它们全部找回来：交互式时间线、因果链力导向图、势力消长图——极具史诗感。
+    </p>
+  </header>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">P.04 / SPEC</div>
+        <h2 class="sec-title">标注集 <span class="stroke">&amp; 渲染</span></h2>
+      </div>
+    </div>
+    <div class="spec-grid reveal">
+      <div class="spec-cell">
+        <h3>ANNOTATION SET — 标注集</h3>
+        <ul>
+          <li><code>[[t:时间点]]</code> — 时间标记</li>
+          <li><code>[[event:事件]]</code> — 事件标记</li>
+          <li><code>[[cau:因果]]</code> — 因果链标记</li>
+          <li><code>[[per:人物]]</code> — 历史人物</li>
+          <li><code>[[loc:地点]]</code> — 地点标记</li>
+          <li><code>[[force:势力]]</code> — 势力 / 阵营</li>
+        </ul>
+      </div>
+      <div class="spec-cell">
+        <h3>RENDERING — 渲染冲击</h3>
+        <p>交互式时间线、因果链力导向图、势力消长图。引入"时间"和"因果"两个全新维度，与文学模式自然衔接——历史书也是书。</p>
+      </div>
+      <div class="spec-cell">
+        <h3>WHY — 优先级</h3>
+        <p>信息损失 ★★★★★ / 渲染冲击 ★★★★★ / 共鸣 ★★★★☆ / 互补性 ★★★★★ —— 总分 19/20，路线图第二顺位。"因果链可视化"直观易懂，极具史诗感。</p>
+      </div>
+      <div class="spec-cell">
+        <h3>SCENE — 典型场景</h3>
+        <p>读一段楚汉相争：点一下"垓下"，看到时间节点、参战势力、前后因果链；拖动时间轴，看势力版图如何消长——历史不再是背下来的一串年份。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">P.04 / DEMO</div>
+        <h2 class="sec-title">因果链，<span class="stroke">看得见</span></h2>
+      </div>
+    </div>
+    <div class="demo-panel reveal"><span class="hl">Manifold 标注示意：</span>
+
+[[t:209BC]]公元前209年[[/]] [[event:daze_uprising]]大泽乡起义[[/]] 爆发
+  → [[cau:trigger]]直接引发[[/]] [[force:chu]]楚地[[/]] 响应
+  → [[per:xiangyu]]项羽[[/]] 于 [[loc:ju_lu]]巨鹿[[/]] [[event:julu_battle]]破釜沉舟[[/]]
+  → [[cau:lead_to]]最终导致[[/]] [[force:qin]]秦[[/]] 主力覆灭
+
+<span class="hl">渲染效果：</span>
+  时间轴  ──●────────●──────────●──────►
+           209BC     208BC      207BC
+           大泽乡     巨鹿       秦亡
+             │因果     │因果
+  势力图    秦 ██████░ → ███░░░ → ░
+            楚 ░░░░░░░ → ████░░ → ██████</div>
+  </section>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">NEXT / VERTICALS</div>
+        <h2 class="sec-title">探索其他 <span class="stroke">垂类</span></h2>
+      </div>
+    </div>
+    <div class="next-products reveal">
+      <a class="next-item" href="game.html"><div class="ni-idx">P.03</div><div class="ni-name">游戏攻略</div><div class="ni-en">Game Guide</div></a>
+      <a class="next-item" href="recipe.html"><div class="ni-idx">P.05</div><div class="ni-name">菜谱烹饪</div><div class="ni-en">Recipe Mode</div></a>
+      <a class="next-item" href="knowledge.html"><div class="ni-idx">P.06</div><div class="ni-name">知识学习</div><div class="ni-en">Knowledge Mode</div></a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot-grid">
+    <div><b>MANIFOLD</b><br>给 AI 的输出装上语义骨架</div>
+    <div><b>TEAM</b><br>燕麦燕麦奶 × 梦之泪伤 · ADVENTUREX 2026</div>
+    <div><b>CHAIN</b><br>BUILT ON INJECTIVE</div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

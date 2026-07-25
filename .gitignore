@@ -1,9 +1,25 @@
-# Preprocessed data & build artifacts
-百年孤独.bookpack
-百年孤独.bookpack_build/
+# ═══ 依赖与本地产物 ═══
+node_modules/
+.vercel/
+*.log
+.workbuddy/
+
+# ═══ 大文件 / 中间产物（预处理工作目录只保留脚本） ═══
+*_work/
+!了不起的盖茨比_work/
+了不起的盖茨比_work/*
+!了不起的盖茨比_work/scripts/
 百年孤独cleaned/
-生命中不能承受之轻_work/
+百年孤独.bookpack_build/
 生命中不能承受之轻.epub
+manifold-video/renders/
+*.zip
+
+# ═══ 验证截图 / 临时文件 ═══
+verify_*.png
+step*.png
+tmp_*.png
+faucet_before_submit.png
 
 # Unrelated
 图片裁切工具.html
@@ -11,3 +27,6 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# 内嵌 git 备份
+.git-backup/

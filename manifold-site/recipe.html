@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>菜谱烹饪 — MANIFOLD 流形</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="manifold-canvas"></canvas>
+
+<a class="back-link" href="index.html#products" data-cursor="BACK"><span class="bar"></span>MANIFOLD / PRODUCTS</a>
+
+<main>
+  <header class="detail-hero">
+    <div class="p-glyph big">肴</div>
+    <div class="detail-meta">
+      <span>P.05</span>
+      <span>STATUS / SOON</span>
+      <span>PRIORITY / 🥉 17/20</span>
+    </div>
+    <h1 class="detail-title">菜谱烹饪</h1>
+    <div class="detail-title-en">Recipe Mode</div>
+    <p class="detail-lead">
+      菜谱的文字描述丢失了大量关键信息——<strong>步骤的依赖关系、食材的替代可能性、失败原因的排查</strong>。
+      Manifold 渲染出流程图、食材关系网、步骤依赖树：实用且好看。
+      每个人都要吃饭，这是零门槛理解的垂类。
+    </p>
+  </header>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">P.05 / SPEC</div>
+        <h2 class="sec-title">标注集 <span class="stroke">&amp; 渲染</span></h2>
+      </div>
+    </div>
+    <div class="spec-grid reveal">
+      <div class="spec-cell">
+        <h3>ANNOTATION SET — 标注集</h3>
+        <ul>
+          <li><code>[[ing:食材]]</code> — 食材标记</li>
+          <li><code>[[step:步骤]]</code> — 步骤标记</li>
+          <li><code>[[tool:工具]]</code> — 工具标记</li>
+          <li><code>[[dep:依赖]]</code> — 步骤依赖</li>
+          <li><code>[[alt:替代]]</code> — 替代方案</li>
+          <li><code>[[temp:温度]]</code> / <code>[[time:时长]]</code> — 温度与时长</li>
+        </ul>
+      </div>
+      <div class="spec-cell">
+        <h3>RENDERING — 渲染冲击</h3>
+        <p>流程图、食材关系网、步骤依赖树。拆解一道菜 → 理解食材关系 → 重建 / 烹饪——与"拆解打造"模式共享同一套"拆开再重组"的逻辑。</p>
+      </div>
+      <div class="spec-cell">
+        <h3>WHY — 优先级</h3>
+        <p>信息损失 ★★★★★ / 渲染冲击 ★★★★☆ / 共鸣 ★★★★★ / 互补性 ★★★☆☆ —— 总分 17/20。每个人都要吃饭，零门槛理解，是传播性最强的垂类。</p>
+      </div>
+      <div class="spec-cell">
+        <h3>SCENE — 典型场景</h3>
+        <p>"没有料酒怎么办？"点一下食材 → 弹出替代方案网；"为什么我的肉柴了？"沿步骤依赖树回溯 → 定位失败环节 → 给出排查路径。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">P.05 / DEMO</div>
+        <h2 class="sec-title">步骤之间，<span class="stroke">有依赖</span></h2>
+      </div>
+    </div>
+    <div class="demo-panel reveal"><span class="hl">Manifold 标注示意：</span>
+
+[[step:1]]腌制[[/]] [[ing:pork]]五花肉[[/]] — [[time:30min]]30分钟[[/]]
+  → [[dep:必须先腌制]] 否则不入味[[/]]
+[[step:2]] [[tool:wok]]热锅[[/]] 冷油，[[temp:mid]]中火[[/]] 煸出油脂
+  → [[alt:无料酒]]可用啤酒替代[[/]]
+
+<span class="hl">渲染效果：</span>
+  步骤依赖树
+   ┌────────┐   ┌────────┐   ┌────────┐
+   │ 腌制    │ → │ 煸油    │ → │ 收汁    │
+   │ 30min  │   │ 中火    │   │ 大火    │
+   └────────┘   └────────┘   └────────┘
+        │失败排查：肉柴？← 回溯至「煸油」温度过高</div>
+  </section>
+
+  <section>
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-index">NEXT / VERTICALS</div>
+        <h2 class="sec-title">探索其他 <span class="stroke">垂类</span></h2>
+      </div>
+    </div>
+    <div class="next-products reveal">
+      <a class="next-item" href="game.html"><div class="ni-idx">P.03</div><div class="ni-name">游戏攻略</div><div class="ni-en">Game Guide</div></a>
+      <a class="next-item" href="history.html"><div class="ni-idx">P.04</div><div class="ni-name">历史时间线</div><div class="ni-en">History Timeline</div></a>
+      <a class="next-item" href="knowledge.html"><div class="ni-idx">P.06</div><div class="ni-name">知识学习</div><div class="ni-en">Knowledge Mode</div></a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot-grid">
+    <div><b>MANIFOLD</b><br>给 AI 的输出装上语义骨架</div>
+    <div><b>TEAM</b><br>燕麦燕麦奶 × 梦之泪伤 · ADVENTUREX 2026</div>
+    <div><b>CHAIN</b><br>BUILT ON INJECTIVE</div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
